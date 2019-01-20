@@ -1,0 +1,54 @@
+{
+  "name": "iotkit-gateway",
+  "version": "0.12.1",
+  "date": "2015-01-26T13:46:41.332Z",
+  "description": "Authotization gateway for iotkit to analytics",
+  "main": "app.js",
+  "dependencies": {
+    "async": "^0.9.0",
+    "hooker": "^0.2.3",
+    "moment": "^2.7.0",
+    "mqtt": "^2.18.2",
+    "node-uuid": "^1.4.1",
+    "request": "^2.34.0",
+    "winston": "^0.9.0",
+    "xml2js": "*", 
+    "redis": "2.8.0"
+  },
+  "scripts": {
+    "test": "node gateway-agent",
+    "start": "node gateway-agent"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/enableiot/iotkit-analytics.git"
+  },
+  "keywords": [
+    "iotkit",
+    "authorization"
+  ],
+  "author": "Intel, CPG",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/enableiot/iotkit-analytics/issues"
+  },
+  "homepage": "https://github.com/enableiot/iotkit-analytics",
+  "devDependencies": {
+    "grunt": "^0.4.4",
+    "mocha": "^1.18.2",
+    "istanbul": "^0.2.7",
+    "rewire": "^2.0.0",
+    "grunt-cli": "^0.1.13",
+    "grunt-contrib-jshint": "^0.10.0",
+    "mocha-teamcity-reporter": "0.0.2",
+    "jshint-teamcity": "^1.0.4",
+    "asserts": "^4.0.0",
+    "chai": "^1.9.1",
+    "grunt-contrib-compress": "^0.8.0",
+    "grunt-mocha-istanbul": "^1.4.0",
+    "grunt-istanbul": "^0.2.5",
+    "sinon": "^1.10.2",
+    "grunt-bumpup": "^0.5.2",
+    "grunt-shell": "^0.7.0"
+  }
+}

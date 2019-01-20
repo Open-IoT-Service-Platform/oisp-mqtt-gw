@@ -1,0 +1,45 @@
+
+version: '3'
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile-gateway
+    restart: always
+    depends_on:
+      - broker
+    working_dir: /app
+    environment:
+      - NODE_ENV=local
+      - BROKER_IP=192.168.0.22
+      - BROKER_PORT=8883
+      - BROKER_USERNAME=admin
+      - BROKER_PASSWORD=password
+      - DASHBOARD_IP=192.168.0.22
+      - DASHBOARD_USERNAME=gateway@intel.com
+      - DASHBOARD_PASSWORD=7d501829lhbl1or0bb1784462c97bcad6
+      - REDIS_IP=192.168.0.22
+      - REDIS_PORT=6379
+      - MQTT_GW_SECRET=/app/keys/mqtt/mqtt_gw_secret.key
+    volumes:
+      - ./data/keys:/app/keys
+      - ./ingestion:/app/ingestion
+      - ./lib:/app/lib
+    command: ./wait-for-it.sh broker:8883 -t 300 -- ./wait-for-it.sh REDIS_IP:REDIS_PORT -t 300
+  broker:
+    build:
+      context: .
+      dockerfile: Dockerfile-broker
+    restart: always
+    ports:
+      - 8883:8883
+    working_dir: /app
+    environment:
+      - REDIS_IP=192.168.0.22
+      - REDIS_PORT=6379
+      - JWT_PUB_KEY=/app/keys/public.pem
+      - BROKER_USERNAME=admin
+      - BROKER_PASSWORD=password
+      - MQTT_GW_SECRET=/app/keys/mqtt/mqtt_gw_secret.key
+    volumes:
+      - ./data/keys:/app/keys
