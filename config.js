@@ -16,24 +16,41 @@
 
 var fs = require('fs')
 
+var extractConfig = function(envVar) {
+    var result = null;
+    try {
+        result = JSON.parse(envVar);
+    } catch (err) {
+        throw new Error("Could not parse ${envVar}:", err);
+    }
+    var mappedResults = {};
+    Object.keys(result).forEach(key => {
+        var value = result[key];
+        if (typeof(value)  == "string" && value.startsWith("@@")) {
+            var newVar = value.substr(2);
+            var newJson = process.env[newVar];
+            value = extractConfig(newJson);
+        }
+        mappedResults[key] = value;
+    });
+    return mappedResults;
+}
+var parsedConfig = extractConfig(process.env.OISP_MQTT_GATEWAY_CONFIG);
 /* default configuration handled with dynamic environment */
 var config = {
     "broker": {
-        "host": process.env.BROKER_IP,
-        "port": process.env.BROKER_PORT,
+        "host": parsedConfig.mqttBrokerUrl,
+        "port": parsedConfig.mqttBrokerPort,
         "retain": false,
         "secure": true,
         "retries": 30,
-        "username": process.env.BROKER_USERNAME,
-        "password": process.env.BROKER_PASSWORD,
-        "key": 'data/keys/ssl/server.key',
-        "cert": 'data/keys/ssl/server.cert',
-        "ca": 'data/keys/ssl/server.cert',
-        "mqttGWSecret": process.env.MQTT_GW_SECRET
+        "username": parsedConfig.mqttBrokerUsername,
+        "password": parsedConfig.mqttBrokerPassword,
+        "mqttGWSecret": parsedConfig.aesKey
     },
     "cache": {
-        "host": process.env.REDIS_IP,
-        "port": process.env.REDIS_PORT
+        "host": parsedConfig.redisConf.hostname,
+        "port": parsedConfig.redisConf.port
     },
     "topics": {
         "subscribe": {
@@ -42,10 +59,10 @@ var config = {
         }
     },
     "api": {
-        host: process.env.DASHBOARD_IP,
-        port: 443,
+        host: parsedConfig.frontendUri,
+        port: parsedConfig.frontendPort,
         protocol: "https",
-        strictSSL: false,
+        strictSSL: true,
         timeout: 10000,
         path: {
             submit: {
@@ -53,8 +70,8 @@ var config = {
             },
             apiHealth: '/v1/api/health'
         },
-        username: process.env.DASHBOARD_USERNAME,
-        password: process.env.DASHBOARD_PASSWORD
+        username: parsedConfig.frontendSystemUser,
+        password: parsedConfig.frontendSystemPassword
     },
     "health": {
         port: 4005
@@ -84,7 +101,7 @@ var config = {
                 level: 'all'
             }
         },
-        "logLevel": "debug", //Default verbosity,
+        "logLevel": "info", //Default verbosity,
         "maxLines": 30
     }
 };
