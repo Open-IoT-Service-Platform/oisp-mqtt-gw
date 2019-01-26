@@ -37,7 +37,7 @@ import base64
 key_path = config.JWT_PUB_KEY
 gwSecretPath = config.MQTT_GW_SECRET
 
-print >> sys.stderr, "jwt_auth_plugin.py: tying to load public RSA key from: ", key_path
+print >> sys.stderr, "jwt_auth_plugin.py: trying to load public RSA key from: ", key_path
 if os.path.exists(key_path):
     with open(key_path, 'rb') as f:
         try:

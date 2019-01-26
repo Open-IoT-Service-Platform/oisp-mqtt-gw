@@ -18,7 +18,7 @@
 
 echo ""
 echo "============================================"
-echo " IoT Kit Analytics Authorization Gateway - Setup"
+echo " OISP Authorization Gateway - Setup"
 echo "============================================"
 
 # clanton has no sudo
@@ -38,7 +38,7 @@ else
 	echo "no /etc/rc5.d directory - startup script not copied"
 fi
 
-# npm install 
+# npm install
 # npm install forever
 # # installing local packages
 # npm install --production

@@ -18,12 +18,12 @@
 
 echo ""
 echo "============================================"
-echo " IoT Kit Analytics Authorization Gateway "
+echo " OISP Authorization Gateway "
 echo "============================================"
 
 # reset logs directory
 if [ -f *.log ]; then
-	echo "   clearing logs..." 
+	echo "   clearing logs..."
    rm *.log
 fi
 
@@ -40,7 +40,3 @@ ${FOREVER} list
 
 echo "done"
 echo ""
-
-
-   
-

@@ -21,7 +21,7 @@ var extractConfig = function(envVar) {
     try {
         result = JSON.parse(envVar);
     } catch (err) {
-        throw new Error("Could not parse ${envVar}:", err);
+        throw new Error("Could not parse " + envVar + ":" + err);
     }
     var mappedResults = {};
     Object.keys(result).forEach(key => {

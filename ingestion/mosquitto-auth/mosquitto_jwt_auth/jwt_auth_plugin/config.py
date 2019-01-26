@@ -16,37 +16,16 @@ import socket
 import os
 import json
 
-#
-# This mosquitto public ip address (may be internal) and port.
-#
-#THIS_MACHINE_IP = str([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][0])
-#THIS_MACHINE_BROKER_PORT = "27018"
-#THIS_MACHINE_BROKER_PORT = ""
-#
-#                 "host1[:port1][,host2[:port2],...[,hostN[:portN]]"
-#
-# print(os.environ["MONGO_IP"])
-# MONGO_INSTANCES = os.environ["MONGO_IP"]
-
-#
-# Number of mongo db record saving attempts before giving up
-#
-AUTORECONNECT_ATTEMPTS = 5
-#
-# confirm write operation to how many mongo nodes before confirmation?
-#
-#MONGO_W = 3 # "majority" # possible values: uint, "majority"
-
-#
-# Time to wait for data replication on mongo cluster
-#
-
 # public key for JWT
-JWT_PUB_KEY = os.environ["JWT_PUB_KEY"]
-MQTT_GW_SECRET = os.environ["MQTT_GW_SECRET"]
+oispConf = os.environ["OISP_MQTT_BROKER_CONFIG"]
+oispConfDict = json.loads(oispConf)
+redisConf = os.environ[oispConfDict["redisConf"][2:]]
+redisConfDict = json.loads(redisConf)
+JWT_PUB_KEY = oispConfDict["jwtPubKey"]
+MQTT_GW_SECRET = oispConfDict["aesKey"]
 #redis configuration
-REDIS_IP = os.environ["REDIS_IP"]
-REDIS_PORT = os.environ["REDIS_PORT"]
+REDIS_IP = redisConfDict["hostname"]
+REDIS_PORT = redisConfDict["port"]
 
 
 #
@@ -66,4 +45,4 @@ ALLOWED_TOPICS = [
 # those users can login using username/password and can pub/sub to any topic:
 #
 SUPERUSERS = {}
-SUPERUSERS[os.environ["BROKER_USERNAME"]] = os.environ["BROKER_PASSWORD"];
+SUPERUSERS[oispConfDict["mqttBrokerUserName"]] = oispConfDict["mqttBrokerPassword"]
