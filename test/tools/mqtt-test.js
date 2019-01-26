@@ -1,11 +1,13 @@
 "use strict"
+//Usage: copy device.json from agent/data directory
 var mqtt = require('mqtt');
-var accountId = "a4ae08b1-bc4b-415a-9e4a-f28f1ab50675";
-var cid = "b9ff1bfd-48a7-40a0-8771-0f2cc1e4becd";
-var deviceId = "testDeviceID";
+var config = require("./device.json")
+var accountId = config.account_id;
+var cid = config.sensor_list[0].cid;
+var deviceId = config.device_id;
 var on = new Date().now;
 var temp = Math.random() * 30;
-var password = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI5NDYxM2Q0Ni1iMmU5LTRiNTMtOTI5Yy02YTA1YzQxMGY4YmMiLCJpc3MiOiJodHRwOi8vZW5hYmxlaW90LmNvbSIsInN1YiI6InRlc3REZXZpY2VJRCIsImV4cCI6MTg2Mjk0Mzg1MzE0MiwiYWNjb3VudHMiOlt7ImlkIjoiYTRhZTA4YjEtYmM0Yi00MTVhLTllNGEtZjI4ZjFhYjUwNjc1Iiwicm9sZSI6ImRldmljZSJ9XSwidHlwZSI6ImRldmljZSJ9.pnvejiZjb2SOxAlDYYvwKp3F9raaU4CBzYRxhEj69CK0iVpr5q3XXiET2od2hQeXkkZ5Z64m-0ddFCGKJXD5fJ1ZVRpni-xnWZd70Yujsf61otsysvHsVmw2bKq0NiyLxboodqnu5l_eS5jsz7MrDY40a4Mf5DdutRqFwvXWy_JbhwRN3PpVWui5GT7OD3dXM4-Bm4MQPPP7lYfmF5RYlU5FdREK2oGLq7X0VctBn-JMdJPieYLWdP_sXPk6GCFsLtVyWCuyrQ8xBla6BQ_eHp1xlqe-VhKXUfthQCKakk912amGovgohOFgDMs8Qz814VUpVzLH_81v9bUmwPuSjg"
+var password = config.device_token;
 var messageObj =  {
     "on": on,
     "accountId": accountId,
