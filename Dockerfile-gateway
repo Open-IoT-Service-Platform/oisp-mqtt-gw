@@ -1,6 +1,8 @@
 FROM mhart/alpine-node:6.13.1
 
 ADD / /app
+RUN apk update && apk upgrade && \
+    apk add --no-cache bash git openssh
 RUN addgroup -g 1001 appuser && \
     adduser -u 1001 -S appuser -G appuser
 
