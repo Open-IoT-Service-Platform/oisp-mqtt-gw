@@ -126,10 +126,11 @@ def check_user_pass(deviceid, token):
       return 0 # auth failed
     else:
       print >> sys.stderr, "jwt_auth_plugin.py: Auth success for DeviceId =", deviceid, "; token_device_id =", token_device_id
-      r.hset(deviceid, "aid", tokenAccount)
-      r.hset(deviceid, "ciphertext", redisToken["ciphertext"])
-      r.hset(deviceid, "tag", redisToken["tag"])
-      r.hset(deviceid, "iv", redisToken["iv"])
+      redisKey = tokenAccount + "." + deviceid
+      r.hset(redisKey, "aid", tokenAccount)
+      r.hset(redisKey, "ciphertext", redisToken["ciphertext"])
+      r.hset(redisKey, "tag", redisToken["tag"])
+      r.hset(redisKey, "iv", redisToken["iv"])
       return 1
     #
   except:
@@ -152,9 +153,11 @@ def topic_acl(topic, deviceid):
        print >> sys.stderr, "jwt_auth_plugin.py: ACL allowed - deviceid is one for superuser!"
        return 1 # allow
 
-     aid = r.hget(deviceid, "aid")
-
-     if not aid:
+     parts = topic.split('/');
+     #aid = r.hget(deviceid, "aid")
+     aid = parts[2];
+     rediskey = aid + "." + deviceid
+     if not aid == r.hget(rediskey, "aid"):
       print >> sys.stderr, "jwt_auth_plugin.py: device not authenticated", deviceid
       return 0 #deny
      #
