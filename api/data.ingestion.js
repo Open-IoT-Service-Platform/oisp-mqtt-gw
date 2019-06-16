@@ -86,12 +86,14 @@ module.exports = function(logger) {
             //It set to set 0 since we do not want to enter to a loop
 
             var did = message.did;
+            var accountId = message.accountId;
+            var rediskey = accountId + "." + did;
             if (did === undefined || did === null) {
                 me.logger.error("Could not find DID in message.");
                 return;
             }
 
-            me.getToken(did)
+            me.getToken(rediskey)
             .then(function(token) {
                 if (token === null) {
                     return;
