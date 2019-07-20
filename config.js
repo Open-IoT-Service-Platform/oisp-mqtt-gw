@@ -61,8 +61,8 @@ var config = {
     "api": {
         host: parsedConfig.frontendUri,
         port: parsedConfig.frontendPort,
-        protocol: "https",
-        strictSSL: true,
+        protocol: "http",
+        strictSSL: false,
         timeout: 10000,
         path: {
             submit: {
