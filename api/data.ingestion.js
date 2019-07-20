@@ -21,7 +21,6 @@ const fs = require('fs');
 var devices = require('../api/iot.devices');
 var config = require("../config");
 var util = require("../lib/common").time;
-var Metric = require("../lib/Metric.data").init(util);
 var topics_subscribe = config.topics.subscribe;
 const crypto = require("crypto");
 const redis = require("redis");
@@ -80,51 +79,58 @@ module.exports = function(logger) {
         /*
             It will be checked if the ttl exist, if it exits the package need to be discarded
         */
-        me.logger.debug("Data Submission Detected : " + topic + " Message " + JSON.stringify(message));
+        me.logger.debug(
+          "Data Submission Detected : " + topic + " Message " + JSON.stringify(message)
+        );
 
         if (!message.forwarded) {
-            //It set to set 0 since we do not want to enter to a loop
+          //It set to set 0 since we do not want to enter to a loop
 
-            var did = message.did;
-            var accountId = message.accountId;
-            var rediskey = accountId + "." + did;
-            if (did === undefined || did === null) {
-                me.logger.error("Could not find DID in message.");
-                return;
-            }
+          var match = topic.match(/server\/metric\/([^\/]*)\/(.*)/);
+          me.logger.debug("Matching topic: " + match);
+          var did = match[2];
+          var accountId = match[1];
+          var rediskey = accountId + "." + did;
+          if (did === undefined || did === null) {
+            me.logger.error("Could not find DID in message.");
+            return;
+          }
 
-            me.getToken(rediskey)
+          me.getToken(rediskey)
             .then(function(token) {
-                if (token === null) {
-                    return;
-                }
-                delete message.deviceToken;
+              if (token === null) {
+                return;
+              }
 
-                if (did && token) {
-                    var metric = new Metric();
-                    var data = {
-                        deviceId: did,
-                        deviceToken: token,
-                        body: metric.fromMQTTToRestPayload(message),
-                        forwarded: true //It set to set 0 since we do not want to enter to a loop
-                    };
+              if (did && token) {
+                delete message.accountId;
+                delete message.did;
+                var data = message;
+                data.deviceToken = token;
 
-                    me.logger.debug("For Forward - device id " + did);
-                    devices.submitData(data, function (err, response) {
-                        if (!err) {
-                            me.logger.info("Response From data Submission from API " + JSON.stringify(response));
-                        } else {
-                            me.logger.error("Data Submission Error " + JSON.stringify(err));
-                        }
-                    });
-                } else {
-                    me.logger.error("Incorrect data submission message format - " + JSON.stringify(message));
-                }
+                me.logger.debug("For Forward - device id " + did);
+                devices.submitData(data, function(err, response) {
+                  if (!err) {
+                    me.logger.info(
+                      "Response From data Submission from API " +
+                      JSON.stringify(response)
+                    );
+                  } else {
+                    me.logger.error("Data Submission Error " + JSON.stringify(err));
+                  }
+                });
+              } else {
+                me.logger.error(
+                  "Incorrect data submission message format - " +
+                  JSON.stringify(message)
+                );
+              }
             })
             .catch(err => {
-                me.logger.error("Could not send message: " + err)
-            });
+              me.logger.error("Could not send message: " + err);
+            })
         }
+
     };
     me.connectTopics = function() {
         me.broker.bind(topics_subscribe.data_ingestion, me.processDataIngestion);
