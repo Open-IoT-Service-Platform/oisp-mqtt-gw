@@ -21,22 +21,8 @@ echo "============================================"
 echo " OISP Authorization Gateway "
 echo "============================================"
 
-# reset logs directory
-if [ -f *.log ]; then
-	echo "   clearing logs..."
-   rm *.log
-fi
 
-export BASE_DIR="${PWD}"
-FOREVER=${BASE_DIR}/node_modules/.bin/forever
-
-${FOREVER} -m 1 \
-              -a -l "${BASE_DIR}/forever.log" \
-              --sourceDir $BASE_DIR \
-              --minUptime 1s \
-              --spinSleepTime 3s app.js
-
-${FOREVER} list
+node ./app.js
 
 echo "done"
 echo ""
