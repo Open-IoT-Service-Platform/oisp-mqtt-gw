@@ -76,7 +76,7 @@ IoTKiT.DeviceComponentOption = DeviceComponentOption;
  * @constructor
  */
 function DeviceSubmitDataOption (data) {
-    this.pathname = common.buildPath(apiconf.path.submit.data, data.deviceId);
+    this.pathname = common.buildPath(apiconf.path.submit.data, data.did);
     ConnectionOptions.call(this);
     this.method = POST_METHOD;
     this.headers["Content-type"] = "application/json";
