@@ -1,8 +1,7 @@
 FROM ubuntu:16.04 as base
 
 RUN apt-get update && apt-get install -y wget && apt-get -y upgrade
-RUN apt-get install -y python-pip  python-dev build-essential jq
-RUN apt-get install -y libc-ares-dev libssl-dev libwrap0-dev uthash-dev uuid-dev
+RUN apt-get install -y python-pip  python-dev build-essential jq libffi-dev libc-ares-dev libssl-dev libwrap0-dev uthash-dev uuid-dev
 
 RUN groupadd -g 999 appuser && \
     useradd -r -u 999 -g appuser appuser
