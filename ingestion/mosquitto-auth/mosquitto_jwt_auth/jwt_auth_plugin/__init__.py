@@ -112,7 +112,7 @@ def check_user_pass(deviceid, token):
     redisToken["tag"] = base64.b64encode(tag);
     redisToken["iv"] = base64.b64encode(cipher.nonce);
 
-    if tokenExp < time.time() * 1000:
+    if tokenExp < time.time():
         print >> sys.stderr, "jwt_auth_plugin.py: Token expired"
         return 0
 
