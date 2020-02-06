@@ -17,7 +17,7 @@
 
 "use strict";
 var Broker = require("./lib/mqtt/connector"),
-    apiData = require('./api/data.ingestion'),
+    ApiData = require('./api/data.ingestion'),
     config = require("./config"),
     logger = require("./lib/logger").init(config),
     health = require('./lib/health');
@@ -31,17 +31,11 @@ brokerConnector.connect(function(err) {
     if (!err) {
         // Manage Connections to API Server
 
-        var apiDataConnector = new apiData(logger);
+        var apiDataConnector = new ApiData(logger);
         apiDataConnector.bind(brokerConnector);
         health.init(brokerConnector);
     } else {
         logger.error("Error on Broker connection ", err);
+        process.exit(1);
     }
-});
-
-
-process.on("uncaughtException", function(err) {
-    logger.error("UncaughtException:" + err.message);
-    logger.debug(err.stack);
-    process.exit(1);
 });

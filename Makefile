@@ -53,7 +53,10 @@ stop:
 	@$(call msg,"Stopping IoT gateway ...");
 	@./docker.sh stop
 
-clean :
+lint:
+	node_modules/grunt-cli/bin/grunt jshint
+
+clean:
 	docker stop iotkitgateway_gateway_1
 	docker stop iotkitgateway_broker_1
 	docker-compose stop

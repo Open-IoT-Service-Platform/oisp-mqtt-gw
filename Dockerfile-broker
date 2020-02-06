@@ -1,28 +1,29 @@
-FROM ubuntu:16.04 as base
+FROM ubuntu:18.04 as base
 
-RUN apt-get update && apt-get install -y wget && apt-get -y upgrade
-RUN apt-get install -y python-pip  python-dev build-essential jq libffi-dev libc-ares-dev libssl-dev libwrap0-dev uthash-dev uuid-dev
+RUN apt update && apt-get install -y wget
+RUN apt update && apt-get install -y python3-pip  python3.8-dev build-essential jq libffi-dev libc-ares-dev libssl-dev libwrap0-dev uthash-dev uuid-dev
 
 RUN groupadd -g 999 appuser && \
     useradd -r -u 999 -g appuser appuser
 
-RUN pip install pycryptodome jwcrypto
+RUN pip3 install pycryptodome jwcrypto python-keycloak
 
-RUN pip install redis
+RUN pip3 install redis
 
 RUN mkdir /app
 RUN chown appuser /app
 
 WORKDIR /app
 
-RUN wget https://mosquitto.org/files/source/mosquitto-1.3.5.tar.gz
+RUN wget https://mosquitto.org/files/source/mosquitto-1.4.15.tar.gz
 
 RUN mkdir mosquitto
 
-RUN tar -xvzf mosquitto-1.3.5.tar.gz -C mosquitto --strip-components 1
+RUN tar -xvzf mosquitto-1.4.15.tar.gz -C mosquitto --strip-components 1
 
 ADD /ingestion/mosquitto-auth /app/mosquitto
 ADD start-broker.sh /app
+ADD wait-for-it.sh /app
 
 WORKDIR /app/mosquitto
 
