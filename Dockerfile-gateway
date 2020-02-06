@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:6.13.1
+FROM node:10-alpine
 
 ADD / /app
 RUN apk update && apk upgrade && \

@@ -20,7 +20,7 @@ gcc \
      -Wall -Werror -std=c99 -ggdb -fPIC \
      -shared jwt_auth_plugin.c \
      -o jwt_auth_plugin.so \
-     `python2.7-config --cflags --ldflags`
+     `python3-config --cflags --ldflags`
 
 set +e
 set +x

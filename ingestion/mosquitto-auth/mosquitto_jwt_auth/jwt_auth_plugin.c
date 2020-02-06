@@ -68,7 +68,7 @@ int mosquitto_auth_plugin_init(void **user_data, struct mosquitto_auth_opt *auth
        }
     }
 
-    PyObject* pName = PyString_FromString("jwt_auth_plugin");
+    PyObject* pName = PyUnicode_FromString("jwt_auth_plugin");
     PyObject* pModule = PyImport_Import(pName);
     Py_DECREF(pName);
 
@@ -163,7 +163,7 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
 {
 
     fprintf(stderr, "jwt_auth_plugin: acl check user=%s topic=%s clientid=%s userdata=%p\n", username, topic, clientid, user_data);
-    
+
     int ret = MOSQ_ERR_UNKNOWN;
     JwtAuthPluginUserData* jwtdata = (JwtAuthPluginUserData*)user_data;
     if(jwtdata == NULL)
@@ -173,9 +173,9 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
     }
 
     PyObject* pArgs = PyTuple_New(2);
-    PyObject* pyTopic = (topic == NULL) ? PyString_FromString("") : PyString_FromString(topic);
+    PyObject* pyTopic = (topic == NULL) ? PyUnicode_FromString("") : PyUnicode_FromString(topic);
     PyTuple_SetItem(pArgs, 0, pyTopic);
-    PyObject* pyDeviceId = (username == NULL) ? PyString_FromString("") : PyString_FromString(username);
+    PyObject* pyDeviceId = (username == NULL) ? PyUnicode_FromString("") : PyUnicode_FromString(username);
     PyTuple_SetItem(pArgs, 1, pyDeviceId);
 
     // call "topic_acl( topic, deviceid )":
@@ -184,19 +184,19 @@ int mosquitto_auth_acl_check(void *user_data, const char *clientid, const char *
 
     if(pyResult_check_acl)
     {
-        int res = (int)PyInt_AsLong(pyResult_check_acl);
-        fprintf(stderr, "jwt_auth_plugin: Result of call: %i\n", res);
-        if(res == 1)
+        long res = PyLong_AsLong(pyResult_check_acl);
+        fprintf(stderr, "jwt_auth_plugin: Result of call: %ld\n", res);
+        if(res == 1L)
         {
             fprintf(stderr, "jwt_auth_plugin: ACL OK!\n");
             ret = MOSQ_ERR_SUCCESS;
         }
-        else if(res == 0) {
+        else if(res == 0L) {
             fprintf(stderr, "jwt_auth_plugin: ACL failed!\n");
             ret = MOSQ_ERR_ACL_DENIED;
         }
         else {
-            fprintf(stderr, "jwt_auth_plugin: ACL ERROR! res=%i\n", res);
+            fprintf(stderr, "jwt_auth_plugin: ACL ERROR! res=%ld\n", res);
             if (PyErr_Occurred())
             {
                 PyErr_Print();
@@ -228,9 +228,9 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
     }
 
     PyObject* pArgs = PyTuple_New(2);
-    PyObject* pyDeviceId = (username == NULL) ? PyString_FromString("") : PyString_FromString(username);
+    PyObject* pyDeviceId = (username == NULL) ? PyUnicode_FromString("") : PyUnicode_FromString(username);
     PyTuple_SetItem(pArgs, 0, pyDeviceId);
-    PyObject* pyToken = (password == NULL) ? PyString_FromString("") : PyString_FromString(password);
+    PyObject* pyToken = (password == NULL) ? PyUnicode_FromString("") : PyUnicode_FromString(password);
     PyTuple_SetItem(pArgs, 1, pyToken);
 
     /* call "check_user_pass( deviceid, token )": */
@@ -239,19 +239,19 @@ int mosquitto_auth_unpwd_check(void *user_data, const char *username, const char
 
     if(pyResult_check_user_pass)
     {
-        int res = (int)PyInt_AsLong(pyResult_check_user_pass);
-        fprintf(stderr, "jwt_auth_plugin: Result of call: %i\n", res);
-        if(res == 1)
+        long res = PyLong_AsLong(pyResult_check_user_pass);
+        fprintf(stderr, "jwt_auth_plugin: Result of call: %ld\n", res);
+        if(res == 1L)
         {
             fprintf(stderr, "jwt_auth_plugin: auth OK!\n");
             ret = MOSQ_ERR_SUCCESS;
         }
-        else if(res == 0) {
+        else if(res == 0L) {
             fprintf(stderr, "jwt_auth_plugin: auth failed!\n");
             ret = MOSQ_ERR_AUTH;
         }
         else {
-            fprintf(stderr, "jwt_auth_plugin: auth ERROR! res=%i\n", res);
+            fprintf(stderr, "jwt_auth_plugin: auth ERROR! res=%ld\n", res);
             if (PyErr_Occurred())
             {
                 PyErr_Print();
@@ -277,4 +277,3 @@ int mosquitto_auth_psk_key_get(void *user_data, const char *hint, const char *id
     /* not needed */
     return 1; // returns >0 if this function is not required or on failure.
 }
-

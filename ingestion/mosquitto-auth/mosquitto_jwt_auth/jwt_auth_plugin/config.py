@@ -27,6 +27,9 @@ MQTT_GW_SECRET = oispConfDict["aesKey"]
 REDIS_IP = redisConfDict["hostname"]
 REDIS_PORT = redisConfDict["port"]
 
+keycloakConf = os.environ["OISP_KEYCLOAK_CONFIG"]
+keycloakConfDict = json.loads(keycloakConf)
+
 
 #
 # consult function topic_acl before making changes here - esp. if related to {accountid}!
@@ -36,8 +39,8 @@ REDIS_PORT = redisConfDict["port"]
 #
 ALLOWED_TOPICS = [
    "server/metric/{accountid}/{deviceid}",
-   "device/{deviceid}/health",
-   "device/{deviceid}/control"
+   "device/health/{accountid}/{deviceid}",
+   "device/control/{accountid}/{deviceid}"
 ]
 
 

@@ -1,5 +1,5 @@
 /**
-* Copyright (c) 2017 Intel Corporation
+* Copyright (c) 2017, 2020 Intel Corporation
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.
@@ -17,62 +17,112 @@
 
 
 "use strict";
-const fs = require('fs');
-var devices = require('../api/iot.devices');
 var config = require("../config");
-var util = require("../lib/common").time;
 var topics_subscribe = config.topics.subscribe;
-const crypto = require("crypto");
+var { Kafka, logLevel } = require('kafkajs');
+var dataSchema = require("../lib/schemas/data.json");
+var Validator = require('jsonschema').Validator;
+var validator = new Validator();
+var uuidValidate = require('uuid-validate');
 const redis = require("redis");
-const NodeCache = require("node-cache");
 var redisClient = redis.createClient({port: config.cache.port, host: config.cache.host});
-var mqttGWKey  = Buffer.from(fs.readFileSync(config.broker.mqttGWSecret, "utf8"), "base64");
-const tokenCache = new NodeCache({stdTTL: 3600});
+const { Sequelize } = require('sequelize');
+const { QueryTypes } = require('sequelize');
+const sequelize = new Sequelize(config.postgres.dbname, config.postgres.username, config.postgres.password, {
+  host: config.postgres.host,
+  port: config.postgres.port,
+  dialect: 'postgres'
+});
+
+
 
 module.exports = function(logger) {
     var me = this;
     me.logger = logger;
-    /**
-     * @descritpion xxxxxxx
-     * @param topic: it is the MQTT topic subscribe, the topic has device id in between
-     * @param message: the message contain the code require to ask for authorization token.
-    */
     me.token = null;
 
+    var kafkaProducer;
+    var brokers = config.kafka.host.split(',');
+    try {
+        const kafka = new Kafka({
+            logLevel: logLevel.INFO,
+            brokers: brokers,
+            clientId: 'frontend-metrics',
+            requestTimeout: config.kafka.requestTimeout,
+            retry: {
+                maxRetryTime: config.kafka.maxRetryTime,
+                retries: config.kafka.retries
+            }
+        });
+        kafkaProducer = kafka.producer();
+        const { CONNECT, DISCONNECT } = kafkaProducer.events;
+        kafkaProducer.on(DISCONNECT, e => {
+            console.log(`Metric producer disconnected!: ${e.timestamp}`);
+            kafkaProducer.connect();
+        });
+        kafkaProducer.on(CONNECT, e => logger.debug("Kafka metric producer connected: " + e));
+        kafkaProducer.connect();
+      } catch(e) {
+          logger.error("Exception occured while creating Kafka Producer: " + e);
+      }
 
-    me.getToken = function (did) {
-        return new Promise(function(resolve, reject) {
-            tokenCache.get(did, function(err, value) {
-                if (!err && value !== undefined) {
-                    resolve(value);
-                }
-                else{
-            //handle cache miss
-                    redisClient.hgetall(did, function(err, obj) {
-                        if (err) {
-                            reject("Could not retrieve token: " + err);
-                        }
 
-                        var iv = Buffer.from(obj.iv, 'base64');
-                        var ciphertext = Buffer.from(obj.ciphertext, 'base64');
-                        var tag = Buffer.from(obj.tag, 'base64');
-                        me.logger.debug("Now decrypting token: " + obj.iv + " " + obj.tag + " " + obj.ciphertext);
-
-                        const algorithm = "aes-128-gcm";
-                        const decipher = crypto.createDecipheriv(algorithm, mqttGWKey, iv);
-                        decipher.setAuthTag(tag);
-                        try {
-                            var decrypted = decipher.update(ciphertext, "utf-8");
-                            decrypted += decipher.final("utf-8");
-                        } catch(err) {
-                            reject("Could not decrypt token.:" + err)
-                        }
-                        var token = decrypted.toString("utf8");
-                        tokenCache.set(did, token)
-                        resolve(token);
-                    });
+    var getDidAndDataType = function(item) {
+        var cid = item.componentId;
+        return new Promise((resolve, reject) => {
+            //check whether cid = uuid
+            if (!uuidValidate(cid)) {
+                reject("cid not UUID. Rejected!");
+            }
+            redisClient.hgetall(cid, function(err, value) {
+                if (err) {
+                    throw err;
+                } else {
+                  resolve(value);
                 }
             });
+        })
+        .then( (value) => {
+              if (value === null || (Array.isArray(value) && value.length === 1 && value[0] === null)) {
+                  // no cached value found => make db lookup and store in cache
+                  var sqlquery='SELECT devices.id,"dataType" FROM dashboard.device_components,dashboard.devices,dashboard.component_types WHERE "componentId"::text=\'' + cid + '\' and "deviceUID"::text=devices.uid::text and device_components."componentTypeId"::text=component_types.id::text';
+                   return sequelize.query(sqlquery, { type: QueryTypes.SELECT });
+              } else {
+                  return [value];
+              }
+          })
+          .then((didAndDataType) => new Promise((resolve, reject) => {
+              if (didAndDataType === undefined || didAndDataType === null) {
+                  reject("DB lookup failed!");
+                  return;
+              }
+              var redisResult = redisClient.hmset(cid, "id", didAndDataType[0].id, "dataType", didAndDataType[0].dataType);
+              didAndDataType[0].dataElement = item;
+              if (redisResult) {
+                  resolve(didAndDataType[0]);
+              } else {
+                  me.logger.warn("Could not store db value in redis. This will significantly reduce performance");
+                  resolve(didAndDataType[0]);
+              }
+          }))
+          .catch(err => me.logger.error("Could not send message to Kafka: " + err));
+    };
+
+    redisClient.on("error", function(err) {
+      me.logger.info("Error in Redis client: " + err);
+    });
+
+    try {
+      sequelize.authenticate();
+      console.log('DB connection has been established.');
+    } catch (error) {
+      console.error('Unable to connect to DB:', error);
+    }
+
+    me.getToken = function (did) {
+        /*jshint unused:false*/
+        return new Promise(function(resolve, reject) {
+          resolve(null);
         });
     };
     me.processDataIngestion = function (topic, message) {
@@ -83,54 +133,56 @@ module.exports = function(logger) {
           "Data Submission Detected : " + topic + " Message " + JSON.stringify(message)
         );
 
-        if (!message.forwarded) {
-          //It set to set 0 since we do not want to enter to a loop
-
-          var match = topic.match(/server\/metric\/([^\/]*)\/(.*)/);
-          me.logger.debug("Matching topic: " + match);
-          var did = match[2];
-          var accountId = match[1];
-          var rediskey = accountId + "." + did;
-          if (did === undefined || did === null) {
-            me.logger.error("Could not find DID in message.");
-            return;
-          }
-
-          me.getToken(rediskey)
-            .then(function(token) {
-              if (token === null) {
-                return;
-              }
-
-              if (did && token) {
-                delete message.accountId;
-                delete message.did;
-                var data = message;
-                data.deviceToken = token;
-
-                me.logger.debug("For Forward - device id " + did);
-                devices.submitData(data, function(err, response) {
-                  if (!err) {
-                    me.logger.info(
-                      "Response From data Submission from API " +
-                      JSON.stringify(response)
-                    );
-                  } else {
-                    me.logger.error("Data Submission Error " + JSON.stringify(err));
-                  }
-                });
-              } else {
-                me.logger.error(
-                  "Incorrect data submission message format - " +
-                  JSON.stringify(message)
-                );
-              }
-            })
-            .catch(err => {
-              me.logger.error("Could not send message: " + err);
-            })
+        //legacy mqtt format is putting actual message in body.
+        //Future formats will directly send valid data.
+        var bodyMessage;
+        if (message.body === undefined) {
+            bodyMessage = message;
+        } else {
+            bodyMessage = message.body;
         }
 
+        if (!validator.validate(bodyMessage, dataSchema["POST"])) {
+            me.logger.info("Schema rejected message! Message will be discarded: " + bodyMessage);
+        } else {
+          //Check: Does accountid fit to topic?
+            var match = topic.match(/server\/metric\/([^\/]*)\/(.*)/);
+            var accountId = match[1];
+
+            if (accountId !== match[1]) {
+                me.logger.info("AccountId in message does not fit to topic! Message will be discarded: " + bodyMessage);
+                return;
+            }
+
+            // Go through data and check whether cid is correct
+            // Also retrieve dataType
+            var promarray = [];
+            bodyMessage.data.forEach(item => {
+                var value = getDidAndDataType(item);
+                promarray.push(value);
+              }
+            );
+            Promise.all(promarray)
+            .then(values => {
+                values.map(item => {
+                    var kafkaMessage = me.prepareKafkaPayload(item, accountId);
+                    var messages = [{key: accountId, value: JSON.stringify(kafkaMessage)}];
+                      var payloads = {
+                              topic: config.kafka.metricsTopic,
+                              messages
+                      };
+                      return kafkaProducer.send(payloads)
+                          .catch((err) => {
+                              return me.logger.error("Could not send message to Kafka: " + err);
+                            }
+                          );
+                });
+            })
+            .then((promarray) => Promise.all(promarray))
+            .catch(function(err) {
+              me.logger.warn("Could not send data to Kafka " + err);
+            });
+        }
     };
     me.connectTopics = function() {
         me.broker.bind(topics_subscribe.data_ingestion, me.processDataIngestion);
@@ -157,5 +209,36 @@ module.exports = function(logger) {
         me.handshake();
         me.connectTopics();
 
+    };
+
+    /**
+     * Prepare datapoint from frontend data structure to Kafka like the following example:
+     * {"dataType":"Number", "aid":"account_id", "cid":"component_id", "value":"1",
+     * "systemOn": 1574262569420, "on": 1574262569420, "loc": null}
+     */
+    me.prepareKafkaPayload = function(didAndDataType, accountId){
+        var dataElement = didAndDataType.dataElement;
+
+        const msg = {
+            dataType: didAndDataType.dataType,
+            aid: accountId,
+            cid: dataElement.componentId,
+            on: dataElement.on,
+            value: dataElement.value.toString()
+        };
+        if (dataElement.systemOn !== undefined) {
+            msg.systemOn = dataElement.systemOn;
+        } else {
+            msg.systemOn = dataElement.on;
+        }
+
+        if (undefined !== dataElement.attributes) {
+            msg.attributes = dataElement.attributes;
+        }
+        if (undefined !== dataElement.loc) {
+            msg.loc = dataElement.loc;
+        }
+
+        return msg;
     };
 };
