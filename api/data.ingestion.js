@@ -178,7 +178,6 @@ module.exports = function(logger) {
                           );
                 });
             })
-            .then((promarray) => Promise.all(promarray))
             .catch(function(err) {
               me.logger.warn("Could not send data to Kafka " + err);
             });
