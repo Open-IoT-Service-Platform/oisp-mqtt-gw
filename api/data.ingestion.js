@@ -20,6 +20,7 @@
 var config = require("../config");
 var topics_subscribe = config.topics.subscribe;
 var { Kafka, logLevel } = require('kafkajs');
+const { Partitioners } = require('kafkajs');
 var dataSchema = require("../lib/schemas/data.json");
 var Validator = require('jsonschema').Validator;
 var validator = new Validator();
@@ -33,7 +34,6 @@ const sequelize = new Sequelize(config.postgres.dbname, config.postgres.username
   port: config.postgres.port,
   dialect: 'postgres'
 });
-
 
 
 module.exports = function(logger) {
@@ -54,7 +54,7 @@ module.exports = function(logger) {
                 retries: config.kafka.retries
             }
         });
-        kafkaProducer = kafka.producer();
+        kafkaProducer = kafka.producer({createPartitioner: Partitioners.DefaultPartitioner});
         const { CONNECT, DISCONNECT } = kafkaProducer.events;
         kafkaProducer.on(DISCONNECT, e => {
             console.log(`Metric producer disconnected!: ${e.timestamp}`);
@@ -166,7 +166,8 @@ module.exports = function(logger) {
             .then(values => {
                 values.map(item => {
                     var kafkaMessage = me.prepareKafkaPayload(item, accountId);
-                    var messages = [{key: accountId, value: JSON.stringify(kafkaMessage)}];
+                    var key = accountId + "." + kafkaMessage.cid;
+                    var messages = [{key, value: JSON.stringify(kafkaMessage)}];
                       var payloads = {
                               topic: config.kafka.metricsTopic,
                               messages
