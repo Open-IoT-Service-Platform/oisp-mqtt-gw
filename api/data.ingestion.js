@@ -19,6 +19,7 @@
 "use strict";
 var config = require("../config");
 var topics_subscribe = config.topics.subscribe;
+var topics_publish = config.topics.publish;
 var { Kafka, logLevel } = require('kafkajs');
 const { Partitioners } = require('kafkajs');
 var dataSchema = require("../lib/schemas/data.json");
@@ -126,6 +127,9 @@ module.exports = function(logger) {
         });
     };
     me.processDataIngestion = function (topic, message) {
+
+        var did;
+        var accountId;
         /*
             It will be checked if the ttl exist, if it exits the package need to be discarded
         */
@@ -147,9 +151,10 @@ module.exports = function(logger) {
         } else {
           //Check: Does accountid fit to topic?
             var match = topic.match(/server\/metric\/([^\/]*)\/(.*)/);
-            var accountId = match[1];
+            accountId = match[1];
+            did = match[2];
 
-            if (accountId !== match[1]) {
+            if (bodyMessage.accountId !== match[1]) {
                 me.logger.info("AccountId in message does not fit to topic! Message will be discarded: " + bodyMessage);
                 return;
             }
@@ -166,6 +171,12 @@ module.exports = function(logger) {
             .then(values => {
                 values.map(item => {
                     var kafkaMessage = me.prepareKafkaPayload(item, accountId);
+                    if (kafkaMessage === null) {
+                        var msg = "Validation of " + JSON.stringify(item.dataElement) + " for type " + item.dataType + " failed!";
+                        me.logger.warn(msg);
+                        me.sendErrorOverChannel(accountId, did, msg);
+                        return;
+                    }
                     var key = accountId + "." + kafkaMessage.cid;
                     var messages = [{key, value: JSON.stringify(kafkaMessage)}];
                       var payloads = {
@@ -200,6 +211,12 @@ module.exports = function(logger) {
             });
         }
     };
+
+    // setup channel to provide error feedback to device agent
+    me.sendErrorOverChannel = function(accountId, did, message) {
+        var path = me.broker.buildPath(topics_publish.error, [accountId, did]);
+        me.broker.publish(path, message, null);
+    };
     /**
     * @description It's bind to the MQTT topics
     * @param broker
@@ -208,7 +225,48 @@ module.exports = function(logger) {
         me.broker = broker;
         me.handshake();
         me.connectTopics();
+    };
 
+    // validate value
+    var validate = function(value, type) {
+        if (type === "Number") {
+            if (isNaN(value)) {
+                return false;
+            } else {
+                return true;
+            }
+        } else if (type === "Boolean") {
+            return value === "0" || value === "1";
+        }
+        else if (type === "String") {
+            if (typeof value === "string") {
+                return true;
+            }
+            return false;
+        }
+
+    };
+
+    // normalize value
+    var normalizeBoolean = function(value, type) {
+        if (type === "Boolean") {
+            // checks: "trUe", "faLSE"
+            if (value.toLowerCase() === "true") {
+                return "1";
+            }
+            if (value.toLowerCase() === "false") {
+                return "0";
+            }
+            // checks: true, false, 0, 1, "0", "1"
+            if (value === true || value === "1" || value === 1) {
+                return "1";
+            }
+            if (value === false || value === "0" || value === 0) {
+                return "0";
+            }
+            return "NaB";
+        }
+        return value;
     };
 
     /**
@@ -218,13 +276,16 @@ module.exports = function(logger) {
      */
     me.prepareKafkaPayload = function(didAndDataType, accountId){
         var dataElement = didAndDataType.dataElement;
-
+        var value = normalizeBoolean(dataElement.value.toString(), didAndDataType.dataType);
+        if (!validate(value, didAndDataType.dataType)) {
+            return null;
+        }
         const msg = {
             dataType: didAndDataType.dataType,
             aid: accountId,
             cid: dataElement.componentId,
             on: dataElement.on,
-            value: dataElement.value.toString()
+            value: value
         };
         if (dataElement.systemOn !== undefined) {
             msg.systemOn = dataElement.systemOn;
