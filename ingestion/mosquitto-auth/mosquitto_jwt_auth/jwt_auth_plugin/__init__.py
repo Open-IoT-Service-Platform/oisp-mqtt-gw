@@ -90,7 +90,7 @@ def check_user_pass(deviceid, token):
         dec = keycloak_openid.decode_token(token, key=certs, options=options)
     except:
         print("jwt_auth_plugin.py: Token signature is wrong", file=sys.stderr)
-        return 0;
+        return 0
     print("jwt_auth_plugin.py: JWT token is valid (deviceid =", deviceid, file=sys.stderr)
     token_device_id = dec['sub']
     tokenType = dec["type"]
@@ -113,6 +113,21 @@ def check_user_pass(deviceid, token):
     print("jwt_auth_plugin.py: Other exception for device id =", deviceid, sys.exc_info()[0], file=sys.stderr)
     raise # die to track error faster - esp. on not included mongo errors
     return -1 # error!
+
+def checkAccountAndDevice(allowed_topic, parts, aid, did):
+    '''
+        Checks wether topic fits to allowed_topic containing {accountId} and {deviceId}
+    '''
+    if not r'{accountid}' in allowed_topic or not r'{deviceid}' in allowed_topic:
+        return 0 # no accountid or deviceid match needed
+    allowed_parts = allowed_topic.split('/')
+    if not (len(parts) == 4 and len(allowed_parts) == 4 and parts[0] == allowed_parts[0] and parts[1] == allowed_parts[1]):
+        return 0 # no match
+    if parts[2] == aid and parts[3] == did:
+        return 1
+    else:
+        print("jwt_auth_plugin.py: Path does not fit to credentials", file=sys.stderr)
+        return 0
 
 def topic_acl(topic, deviceid):
     '''
@@ -138,30 +153,18 @@ def topic_acl(topic, deviceid):
         parts = topic.split('/')
         aid = parts[2]
         rediskey = aid + "." + deviceid
-        aid_redis = r.hget(rediskey, "aid");
+        aid_redis = r.hget(rediskey, "aid")
         if aid_redis is None: # account+deviceid not in redis => never authenticated
             print("jwt_auth_plugin.py: device not authenticated for the topic", deviceid, file=sys.stderr)
             return 0 #deny
         for allowed_topic in config.ALLOWED_TOPICS:
-            # special case for topic with accountid inside:
-            if allowed_topic.startswith("server/metric/{accountid}/{deviceid}"):
-                if not topic.startswith("server/metric/"):
-                    continue;
-
-                if len(parts) == 4 and parts[0] == "server"  and parts[1] == "metric" and parts[2] == aid and parts[3] == deviceid:
-                    return 1 # allow
-                else:
-                    print("jwt_auth_plugin.py: Path does not fit to credentials", file=sys.stderr)
-                    return 0 # deny
-            elif allowed_topic.startswith("device/health"): # any other topic (no accountid assumed)
-                expected = allowed_topic.replace("{deviceid}", deviceid).replace("{account}", aid_redis)
-                print("this is the expected topic and found topic", expected, topic, file=sys.stderr)
-                if topic == expected:
-                    return 1 # allow
+            # We need to check whether aid and deviceId fit to jwt credentials:
+            if checkAccountAndDevice(allowed_topic, parts, aid_redis.decode(), deviceid) == 1:
+                return 1 # allow since match found
         #
         # if we run out of allowed topics - deny access:
         #
-        print("jwt_auth_plugin.py: ACL check failed for deviceid", deviceid, "- run out of valid topics", file=sys.stderr)
+        print("jwt_auth_plugin.py: ACL check failed for deviceid", deviceid, "- no match for valid topics", file=sys.stderr)
         return 0 # deny
     except Exception as e:
         print("jwt_auth_plugin.py: Other exception for device id =", deviceid, str(e), sys.exc_info()[0], file=sys.stderr)

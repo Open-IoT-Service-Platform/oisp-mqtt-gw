@@ -14,7 +14,11 @@
 * limitations under the License.
 */
 
-var fs = require('fs')
+var fs = require('fs');
+var loglevel = process.env.LOGLEVEL;
+if (loglevel === undefined) {
+    loglevel = "info"; //Default verbosity
+}
 
 var extractConfig = function(envVar) {
     var result = null;
@@ -71,6 +75,9 @@ var config = {
         "subscribe": {
             "data_ingestion": "server/metric/+/+",
             "health": "server/devices/+/health"
+        },
+        "publish": {
+            "error": "server/error/{accountId}/{deviceId}"
         }
     },
     "api": {
@@ -116,7 +123,7 @@ var config = {
                 level: 'all'
             }
         },
-        "logLevel": "info", //Default verbosity,
+        "logLevel": loglevel,
         "maxLines": 30
     }
 };
