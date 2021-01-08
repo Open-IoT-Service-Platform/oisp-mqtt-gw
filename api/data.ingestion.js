@@ -30,11 +30,8 @@ const redis = require("redis");
 var redisClient = redis.createClient({port: config.cache.port, host: config.cache.host});
 const { Sequelize } = require('sequelize');
 const { QueryTypes } = require('sequelize');
-const sequelize = new Sequelize(config.postgres.dbname, config.postgres.username, config.postgres.password, {
-  host: config.postgres.host,
-  port: config.postgres.port,
-  dialect: 'postgres'
-});
+const sequelize = new Sequelize(config.postgres.dbname, config.postgres.username,
+    config.postgres.password, config.postgres.options);
 
 
 module.exports = function(logger) {

@@ -14,7 +14,6 @@
 * limitations under the License.
 */
 
-var fs = require('fs');
 var loglevel = process.env.LOGLEVEL;
 if (loglevel === undefined) {
     loglevel = "info"; //Default verbosity
@@ -30,7 +29,7 @@ var extractConfig = function(envVar) {
     var mappedResults = {};
     Object.keys(result).forEach(key => {
         var value = result[key];
-        if (typeof(value)  == "string" && value.startsWith("@@")) {
+        if (typeof(value)  === "string" && value.startsWith("@@")) {
             var newVar = value.substr(2);
             var newJson = process.env[newVar];
             value = extractConfig(newJson);
@@ -38,8 +37,35 @@ var extractConfig = function(envVar) {
         mappedResults[key] = value;
     });
     return mappedResults;
-}
+};
+
 var parsedConfig = extractConfig(process.env.OISP_MQTT_GATEWAY_CONFIG);
+
+
+// Get replica information from the postgres config,
+// Done this way to avoid compatibility problems with other services
+var postgresReadReplicas = [],
+    postgresWriteConf = {};
+
+if (parsedConfig.postgresConfig.readReplicas) {
+    postgresReadReplicas = parsedConfig.postgresConfig.readReplicas;
+} else if (parsedConfig.postgresConfig.readHostname) {
+    postgresReadReplicas.push({
+        host: parsedConfig.postgresConfig.readHostname,
+        port: parsedConfig.postgresConfig.readPort
+    });
+} else {
+    // Use default db config as read
+    postgresReadReplicas.push({});
+}
+
+if (parsedConfig.postgresConfig.writeHostname) {
+    postgresWriteConf = {
+        host: parsedConfig.postgresConfig.writeHostname,
+        port: parsedConfig.postgresConfig.writePort
+    };
+}
+
 /* default configuration handled with dynamic environment */
 var config = {
     "broker": {
@@ -57,19 +83,31 @@ var config = {
         "port": parsedConfig.redisConf.port
     },
     "kafka": {
-      "host": parsedConfig.kafkaConfig.uri,
-      "metricsTopic": parsedConfig.kafkaConfig.topicsObservations,
-      "replication": parsedConfig.kafkaConfig.replication,
-      "requestTimeout": parsedConfig.kafkaConfig.requestTimeout,
-      "maxRetryTime": parsedConfig.kafkaConfig.maxRetryTime,
-      "retries": parsedConfig.kafkaConfig.retries
+        "host": parsedConfig.kafkaConfig.uri,
+        "metricsTopic": parsedConfig.kafkaConfig.topicsObservations,
+        "replication": parsedConfig.kafkaConfig.replication,
+        "requestTimeout": parsedConfig.kafkaConfig.requestTimeout,
+        "maxRetryTime": parsedConfig.kafkaConfig.maxRetryTime,
+        "retries": parsedConfig.kafkaConfig.retries
     },
-    "postgres": {
-      "host": parsedConfig.postgresConfig.hostname,
-      "dbname": parsedConfig.postgresConfig.dbname,
-      "port": parsedConfig.postgresConfig.port,
-      "username": parsedConfig.postgresConfig.username,
-      "password": parsedConfig.postgresConfig.password
+    postgres: {
+        dbname: parsedConfig.postgresConfig.dbname,
+        username: parsedConfig.postgresConfig.username,
+        password: parsedConfig.postgresConfig.password,
+        options: {
+            port: parsedConfig.postgresConfig.port,
+            host: parsedConfig.postgresConfig.hostname,
+            dialect: 'postgres',
+            replication: {
+                read: postgresReadReplicas,
+                write: postgresWriteConf
+            },
+            pool: {
+                max: 12,
+                min: 0,
+                idle: 10000
+            }
+        }
     },
     "topics": {
         "subscribe": {

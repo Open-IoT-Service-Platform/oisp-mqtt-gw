@@ -23,6 +23,7 @@ module.exports = function(grunt) {
             jshint: 'buildscripts/jshint',
             jsfiles: ['Gruntfile.js',
                       'app.js',
+                      'config.js',
                       'lib/**/*.js',
                       'api/**/*.js']
         },
@@ -59,8 +60,7 @@ module.exports = function(grunt) {
           gruntfile: ['Gruntfile.js'],
           src: ['<%= dirs.jsfiles %>'],
 
-        },
-
-		    });
+        }
+    });
     grunt.loadNpmTasks('grunt-contrib-jshint');
 };
