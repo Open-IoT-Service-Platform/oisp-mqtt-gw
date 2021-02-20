@@ -24,7 +24,8 @@ module.exports = function(grunt) {
             jsfiles: ['Gruntfile.js',
                       'app.js',
                       'lib/**/*.js',
-                      'api/**/*.js']
+                      'api/**/*.js',
+                      'test/unit/*.js']
         },
         jshint: {
           options: {
@@ -40,7 +41,8 @@ module.exports = function(grunt) {
             "browser": true,
             "unused": true,
             "node": true,
-            "esversion": 6,
+            "multistr": true,
+            "esversion": 8,
             "globals": {
                 "angular": true,
                 "confirm": true,
@@ -53,14 +55,47 @@ module.exports = function(grunt) {
                 "$": true,
                 "moment": true,
                 "flipCounter": true,
-                "uuid": true
+                "uuid": true,
+                "describe"   : false,
+                "it"         : false,
+                "before"     : false,
+                "beforeEach" : false,
+                "after"      : false,
+                "afterEach"  : false,
+                "done"       : false            
             }
           },
           gruntfile: ['Gruntfile.js'],
           src: ['<%= dirs.jsfiles %>'],
 
         },
+        mochaTest: {
+          test: {
+              options: {
+                  reporter: 'spec',
+                  clearRequireCache: true
+              },
+              src: ['test/unit/*.js']
+          },
+      },
+      nyc: {
+        cover: {
+          options: {
+            include: ['lib/**', 'api/**', 'config.js'],
+            exclude: '*Tests.js',
+            reporter: ['lcov', 'text-summary'],
+            all: true
+          },
+          cmd: false,
+          args: ['grunt', 'test']
+        }
+      }
 
-		    });
+		});
     grunt.loadNpmTasks('grunt-contrib-jshint');
+    grunt.loadNpmTasks('grunt-mocha-test');
+    grunt.loadNpmTasks('grunt-simple-nyc');
+    grunt.registerTask('default', ['jshint', 'test', 'coverage']);
+    grunt.registerTask('test', ['mochaTest']);
+    grunt.registerTask( "coverage", [ "nyc" ]);
 };
