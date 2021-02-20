@@ -44,13 +44,18 @@ var parsedConfig = extractConfig(process.env.OISP_MQTT_GATEWAY_CONFIG);
 var config = {
     "broker": {
         "host": parsedConfig.mqttBrokerUrl,
-        "port": parsedConfig.mqttBrokerPort,
+        "port": parsedConfig.mqttBrokerLocalPort,
         "retain": false,
-        "secure": true,
+        "secure": false,
         "retries": 30,
         "username": parsedConfig.mqttBrokerUsername,
-        "password": parsedConfig.mqttBrokerPassword,
-        "mqttGWSecret": parsedConfig.aesKey
+        "password": parsedConfig.mqttBrokerPassword
+    },
+    "authService": {
+        "port": parsedConfig.authServicePort,
+        "auth-server-port": parsedConfig.keycloakConfig.listenerPort,
+        "auth-server-url": parsedConfig.keycloakConfig["auth-server-url"],
+        "realm": parsedConfig.keycloakConfig.realm
     },
     "cache": {
         "host": parsedConfig.redisConf.hostname,
@@ -73,7 +78,7 @@ var config = {
     },
     "topics": {
         "subscribe": {
-            "data_ingestion": "server/metric/+/+",
+            "data_ingestion": "$share/bridge/server/metric/+/+",
             "health": "server/devices/+/health"
         },
         "publish": {
@@ -131,17 +136,10 @@ var config = {
 // TODO
 /* override for local development if NODE_ENV is defined to local */
 if (process.env.NODE_ENV && (process.env.NODE_ENV.toLowerCase().indexOf("local") !== -1)) {
-    // config.broker.host = "broker";
-    // config.broker.port = 1883;
-    config.broker.secure = true;
-    //config.broker.username = "gateway";
-    //config.broker.password = "changeit";
 
-    // config.api.host = "localhost";
     config.api.port = 80;
     config.api.protocol = "http";
-    // config.api.username = "gateway@intel.com";
-    // config.api.password = "gateway";
+
     config.logger.transport.file.filename = "gateway.log";
     config.logger.transport.console.json = false;
     config.logger.transport.console.prettyPrint = false;

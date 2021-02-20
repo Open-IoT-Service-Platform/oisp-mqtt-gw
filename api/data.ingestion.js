@@ -18,28 +18,70 @@
 
 "use strict";
 var config = require("../config");
-var topics_subscribe = config.topics.subscribe;
-var topics_publish = config.topics.publish;
 var { Kafka, logLevel } = require('kafkajs');
 const { Partitioners } = require('kafkajs');
-var dataSchema = require("../lib/schemas/data.json");
-var Validator = require('jsonschema').Validator;
-var validator = new Validator();
-var uuidValidate = require('uuid-validate');
-const redis = require("redis");
-var redisClient = redis.createClient({port: config.cache.port, host: config.cache.host});
-const { Sequelize } = require('sequelize');
-const { QueryTypes } = require('sequelize');
-const sequelize = new Sequelize(config.postgres.dbname, config.postgres.username, config.postgres.password, {
-  host: config.postgres.host,
-  port: config.postgres.port,
-  dialect: 'postgres'
-});
+var me;
 
+const CacheFactory = require("../lib/cache");
+
+
+// validate value
+var validate = function(value, type) {
+    if (type === "Number") {
+        if (isNaN(value)) {
+            return false;
+        } else {
+            return true;
+        }
+    } else if (type === "Boolean") {
+        return value === "0" || value === "1";
+    }
+    else if (type === "String") {
+        if (typeof value === "string") {
+            return true;
+        }
+        return false;
+    }
+
+};
+
+    // normalize value
+    var normalizeBoolean = function(value, type) {
+        if (type === "Boolean") {
+            // checks: true, false, 0, 1, "0", "1"
+            if (value === true || value === "1" || value === 1) {
+                return "1";
+            }
+            if (value === false || value === "0" || value === 0) {
+                return "0";
+            }
+            // checks: "trUe", "faLSE"
+            try {
+                if (value.toLowerCase() === "true") {
+                    return "1";
+                }
+                if (value.toLowerCase() === "false") {
+                    return "0";
+                }
+            } catch (e) {
+                return "NaB";
+            }
+            return "NaB";
+        }
+        return value;
+    };
 
 module.exports = function(logger) {
-    var me = this;
+    var topics_subscribe = config.topics.subscribe;
+    var topics_publish = config.topics.publish;
+    var dataSchema = require("../lib/schemas/data.json");
+    var Validator = require('jsonschema').Validator;
+    var validator = new Validator();
+    var cache = new CacheFactory(config, logger).getInstance();
+
+    me = this;
     me.logger = logger;
+    me.cache = cache;
     me.token = null;
 
     var kafkaProducer;
@@ -67,58 +109,6 @@ module.exports = function(logger) {
           logger.error("Exception occured while creating Kafka Producer: " + e);
       }
 
-
-    var getDidAndDataType = function(item) {
-        var cid = item.componentId;
-        return new Promise((resolve, reject) => {
-            //check whether cid = uuid
-            if (!uuidValidate(cid)) {
-                reject("cid not UUID. Rejected!");
-            }
-            redisClient.hgetall(cid, function(err, value) {
-                if (err) {
-                    throw err;
-                } else {
-                  resolve(value);
-                }
-            });
-        })
-        .then( (value) => {
-              if (value === null || (Array.isArray(value) && value.length === 1 && value[0] === null)) {
-                  // no cached value found => make db lookup and store in cache
-                  var sqlquery='SELECT devices.id,"dataType" FROM dashboard.device_components,dashboard.devices,dashboard.component_types WHERE "componentId"::text=\'' + cid + '\' and "deviceUID"::text=devices.uid::text and device_components."componentTypeId"::text=component_types.id::text';
-                   return sequelize.query(sqlquery, { type: QueryTypes.SELECT });
-              } else {
-                  return [value];
-              }
-          })
-          .then((didAndDataType) => new Promise((resolve, reject) => {
-              if (didAndDataType === undefined || didAndDataType === null) {
-                  reject("DB lookup failed!");
-                  return;
-              }
-              var redisResult = redisClient.hmset(cid, "id", didAndDataType[0].id, "dataType", didAndDataType[0].dataType);
-              didAndDataType[0].dataElement = item;
-              if (redisResult) {
-                  resolve(didAndDataType[0]);
-              } else {
-                  me.logger.warn("Could not store db value in redis. This will significantly reduce performance");
-                  resolve(didAndDataType[0]);
-              }
-          }))
-          .catch(err => me.logger.error("Could not send message to Kafka: " + err));
-    };
-
-    redisClient.on("error", function(err) {
-      me.logger.info("Error in Redis client: " + err);
-    });
-
-    try {
-      sequelize.authenticate();
-      console.log('DB connection has been established.');
-    } catch (error) {
-      console.error('Unable to connect to DB:', error);
-    }
 
     me.getToken = function (did) {
         /*jshint unused:false*/
@@ -149,21 +139,15 @@ module.exports = function(logger) {
         if (!validator.validate(bodyMessage, dataSchema["POST"])) {
             me.logger.info("Schema rejected message! Message will be discarded: " + bodyMessage);
         } else {
-          //Check: Does accountid fit to topic?
+            //Get accountId
             var match = topic.match(/server\/metric\/([^\/]*)\/(.*)/);
             accountId = match[1];
-            did = match[2];
-
-            if (bodyMessage.accountId !== match[1]) {
-                me.logger.info("AccountId in message does not fit to topic! Message will be discarded: " + bodyMessage);
-                return;
-            }
 
             // Go through data and check whether cid is correct
             // Also retrieve dataType
             var promarray = [];
             bodyMessage.data.forEach(item => {
-                var value = getDidAndDataType(item);
+                var value = me.cache.getDidAndDataType(item);
                 promarray.push(value);
               }
             );
@@ -227,47 +211,6 @@ module.exports = function(logger) {
         me.connectTopics();
     };
 
-    // validate value
-    var validate = function(value, type) {
-        if (type === "Number") {
-            if (isNaN(value)) {
-                return false;
-            } else {
-                return true;
-            }
-        } else if (type === "Boolean") {
-            return value === "0" || value === "1";
-        }
-        else if (type === "String") {
-            if (typeof value === "string") {
-                return true;
-            }
-            return false;
-        }
-
-    };
-
-    // normalize value
-    var normalizeBoolean = function(value, type) {
-        if (type === "Boolean") {
-            // checks: "trUe", "faLSE"
-            if (value.toLowerCase() === "true") {
-                return "1";
-            }
-            if (value.toLowerCase() === "false") {
-                return "0";
-            }
-            // checks: true, false, 0, 1, "0", "1"
-            if (value === true || value === "1" || value === 1) {
-                return "1";
-            }
-            if (value === false || value === "0" || value === 0) {
-                return "0";
-            }
-            return "NaB";
-        }
-        return value;
-    };
 
     /**
      * Prepare datapoint from frontend data structure to Kafka like the following example:
