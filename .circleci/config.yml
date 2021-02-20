@@ -164,11 +164,12 @@ jobs:
           name: Install dependencies
           command: |
             npm install
+            sudo npm install -g grunt-cli
       - run:
           shell: /bin/bash
           name: Run linting and tests
           command: |
-            make lint
+            grunt jshint
 workflows:
   version: 2.1
   workflow:
