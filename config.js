@@ -41,6 +41,14 @@ var extractConfig = function(envVar) {
 }
 var parsedConfig = extractConfig(process.env.OISP_MQTT_GATEWAY_CONFIG);
 /* default configuration handled with dynamic environment */
+if (parsedConfig.kafkaConfig !== undefined) {
+    if (parsedConfig.kafkaConfig.linger === undefined) {
+        parsedConfig.kafkaConfig.linger = 50;
+    }
+    if (parsedConfig.kafkaConfig.partitioner === undefined) {
+        parsedConfig.kafkaConfig.partitioner = "defaultPartitioner";
+    }
+}
 var config = {
     "broker": {
         "host": parsedConfig.mqttBrokerUrl,
@@ -67,7 +75,9 @@ var config = {
       "replication": parsedConfig.kafkaConfig.replication,
       "requestTimeout": parsedConfig.kafkaConfig.requestTimeout,
       "maxRetryTime": parsedConfig.kafkaConfig.maxRetryTime,
-      "retries": parsedConfig.kafkaConfig.retries
+      "retries": parsedConfig.kafkaConfig.retries,
+      "linger": parsedConfig.kafkaConfig.linger,
+      "partitioner": parsedConfig.kafkaConfig.partitioner
     },
     "postgres": {
       "host": parsedConfig.postgresConfig.hostname,
