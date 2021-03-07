@@ -25,6 +25,18 @@ var me;
 const CacheFactory = require("../lib/cache");
 
 
+// Round Robin partitioner used to handle single clients with
+// too high throughput
+const RoundRobinPartitioner = () => {
+    var curPartition = 0;
+    return ({ partitionMetadata}) => {
+        var numPartitions = partitionMetadata.length;
+        var partition = curPartition % numPartitions;
+        curPartition++;
+        return partition;
+    };
+};
+
 // validate value
 var validate = function(value, type) {
     if (type === "Number") {
@@ -45,31 +57,94 @@ var validate = function(value, type) {
 
 };
 
-    // normalize value
-    var normalizeBoolean = function(value, type) {
-        if (type === "Boolean") {
-            // checks: true, false, 0, 1, "0", "1"
-            if (value === true || value === "1" || value === 1) {
+// normalize value
+var normalizeBoolean = function (value, type) {
+    if (type === "Boolean") {
+        // checks: true, false, 0, 1, "0", "1"
+        if (value === true || value === "1" || value === 1) {
+            return "1";
+        }
+        if (value === false || value === "0" || value === 0) {
+            return "0";
+        }
+        // checks: "trUe", "faLSE"
+        try {
+            if (value.toLowerCase() === "true") {
                 return "1";
             }
-            if (value === false || value === "0" || value === 0) {
+            if (value.toLowerCase() === "false") {
                 return "0";
             }
-            // checks: "trUe", "faLSE"
-            try {
-                if (value.toLowerCase() === "true") {
-                    return "1";
-                }
-                if (value.toLowerCase() === "false") {
-                    return "0";
-                }
-            } catch (e) {
-                return "NaB";
-            }
+        } catch (e) {
             return "NaB";
         }
-        return value;
-    };
+        return "NaB";
+    }
+    return value;
+};
+
+// @brief Aggregates messages for periodic executed Kafka producer
+class KafkaAggregator {
+    constructor(logger) {
+        this.logger = logger;
+        this.messageArray = [];
+        var brokers = config.kafka.host.split(',');
+        try {
+            const kafka = new Kafka({
+                logLevel: logLevel.INFO,
+                brokers: brokers,
+                clientId: 'frontend-metrics',
+                requestTimeout: config.kafka.requestTimeout,
+                retry: {
+                    maxRetryTime: config.kafka.maxRetryTime,
+                    retries: config.kafka.retries
+                }
+            });
+            if (config.kafka.partitioner === "roundRobinPartitioner") {
+                this.kafkaProducer = kafka.producer({createPartitioner: RoundRobinPartitioner});
+                this.logger.info("Round Robin partitioner enforced");
+            } else {
+                this.kafkaProducer = kafka.producer({createPartitioner: Partitioners.DefaultPartitioner});
+                this.logger.info("Default partitioner is used");
+            }
+            const { CONNECT, DISCONNECT } = this.kafkaProducer.events;
+            this.kafkaProducer.on(DISCONNECT, e => {
+                console.log(`Metric producer disconnected!: ${e.timestamp}`);
+                this.kafkaProducer.connect();
+            });
+            this.kafkaProducer.on(CONNECT, e => logger.debug("Kafka metric producer connected: " + e));
+            this.kafkaProducer.connect();
+          } catch(e) {
+              this.logger.error("Exception occured while creating Kafka Producer: " + e);
+          }
+    }
+    start(timer) {
+        this.intervalObj = setInterval(() => {
+            if (this.messageArray.length === 0) {
+                return;
+            }
+            console.log('messageHash consist of ' + this.messageArray.length + " Items");
+
+            var payloads = {
+                topic: config.kafka.metricsTopic,
+                messages: this.messageArray
+            };
+            this.logger.debug("will now deliver Kafka message: " + JSON.stringify(payloads));
+            this.kafkaProducer.send(payloads)
+            .catch((err) => {
+                return this.logger.error("Could not send message to Kafka: " + err);
+              }
+            );
+            this.messageArray = [];
+        }, timer);
+    }
+    stop() {
+        clearInterval(this.intervalObj);
+    }
+    addMessage(message) {
+        this.messageArray.push(message);
+    }
+}
 
 module.exports = function(logger) {
     var topics_subscribe = config.topics.subscribe;
@@ -78,37 +153,17 @@ module.exports = function(logger) {
     var Validator = require('jsonschema').Validator;
     var validator = new Validator();
     var cache = new CacheFactory(config, logger).getInstance();
-
     me = this;
+    me.kafkaAggregator = new KafkaAggregator(logger);
+    me.kafkaAggregator.start(config.kafka.linger);
+
     me.logger = logger;
     me.cache = cache;
     me.token = null;
 
-    var kafkaProducer;
-    var brokers = config.kafka.host.split(',');
-    try {
-        const kafka = new Kafka({
-            logLevel: logLevel.INFO,
-            brokers: brokers,
-            clientId: 'frontend-metrics',
-            requestTimeout: config.kafka.requestTimeout,
-            retry: {
-                maxRetryTime: config.kafka.maxRetryTime,
-                retries: config.kafka.retries
-            }
-        });
-        kafkaProducer = kafka.producer({createPartitioner: Partitioners.DefaultPartitioner});
-        const { CONNECT, DISCONNECT } = kafkaProducer.events;
-        kafkaProducer.on(DISCONNECT, e => {
-            console.log(`Metric producer disconnected!: ${e.timestamp}`);
-            kafkaProducer.connect();
-        });
-        kafkaProducer.on(CONNECT, e => logger.debug("Kafka metric producer connected: " + e));
-        kafkaProducer.connect();
-      } catch(e) {
-          logger.error("Exception occured while creating Kafka Producer: " + e);
-      }
-
+    me.stopAggregator = function() {
+        me.kafkaAggregator.stop();
+    };
 
     me.getToken = function (did) {
         /*jshint unused:false*/
@@ -116,6 +171,7 @@ module.exports = function(logger) {
           resolve(null);
         });
     };
+
     me.processDataIngestion = function (topic, message) {
 
         var did;
@@ -162,16 +218,9 @@ module.exports = function(logger) {
                         return;
                     }
                     var key = accountId + "." + kafkaMessage.cid;
-                    var messages = [{key, value: JSON.stringify(kafkaMessage)}];
-                      var payloads = {
-                              topic: config.kafka.metricsTopic,
-                              messages
-                      };
-                      return kafkaProducer.send(payloads)
-                          .catch((err) => {
-                              return me.logger.error("Could not send message to Kafka: " + err);
-                            }
-                          );
+                    var message = {key, value: JSON.stringify(kafkaMessage)};
+
+                    me.kafkaAggregator.addMessage(message);
                 });
             })
             .catch(function(err) {

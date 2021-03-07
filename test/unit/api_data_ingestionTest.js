@@ -140,6 +140,11 @@ describe(fileToTest, function() {
 
         }
     };
+    class KafkaAggregator {
+        start(){}
+        stop(){}
+        addMessage(){}
+    }
 
     class CacheFactory {
         constructor() {
@@ -153,11 +158,14 @@ describe(fileToTest, function() {
             };
         }
     }
+    var origKafkaAggregator;
     var cid = "dfcd5482-6fb5-4341-a887-b8041fe83dc2";
     it('Shall initialize data ingestion modules Kafka and Cache', function (done) {
         ToTest.__set__("Kafka", Kafka);
         ToTest.__set__("CacheFactory", CacheFactory);
         ToTest.__set__("config", config);
+        origKafkaAggregator = ToTest.__get__("KafkaAggregator");
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
         var dataIngestion = new ToTest(logger);
         assert.isObject(dataIngestion);
         done();
@@ -185,9 +193,9 @@ describe(fileToTest, function() {
                                 loc:null
                             };
                             assert.deepEqual(JSON.parse(message.value), value, "Received Kafke message not correct");
-
+                            dataIngestion.stopAggregator();
                             done();
-                            return null;
+                            return new Promise(() => {});
                         },
                         events: "event"
                     };
@@ -197,10 +205,14 @@ describe(fileToTest, function() {
         var prepareKafkaPayload = function(){
             return {"dataType":"String", "aid":"accountId", "cid":cid, "value":"value", "systemOn": 1, "on": 1, "loc": null};
         };
+
         ToTest.__set__("Kafka", Kafka);
         ToTest.__set__("config", config);
         ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("KafkaAggregator", origKafkaAggregator);
+
         var dataIngestion = new ToTest(logger);
+
         dataIngestion.prepareKafkaPayload = prepareKafkaPayload;
         var message = {
             accountId: "accountId",
@@ -215,7 +227,6 @@ describe(fileToTest, function() {
         };
     
         dataIngestion.processDataIngestion("server/metric/accountId/device", message);
-        //done();
     });
     it('Validate data types', function (done) {
         ToTest.__set__("Kafka", Kafka);
@@ -247,6 +258,7 @@ describe(fileToTest, function() {
         ToTest.__set__("Kafka", Kafka);
         ToTest.__set__("CacheFactory", CacheFactory);
         ToTest.__set__("config", config);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
         var dataIngestion = new ToTest(logger);
         var didAndDataType = {
             dataType: "String",
