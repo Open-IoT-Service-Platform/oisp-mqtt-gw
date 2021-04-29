@@ -61,9 +61,16 @@ var config = {
     },
     "authService": {
         "port": parsedConfig.authServicePort,
-        "auth-server-port": parsedConfig.keycloakConfig.listenerPort,
         "auth-server-url": parsedConfig.keycloakConfig["auth-server-url"],
-        "realm": parsedConfig.keycloakConfig.realm
+        "realm": parsedConfig.keycloakConfig.realm,
+        "resource": parsedConfig.keycloakConfig["mqtt-broker-id"],
+        "credentials": {
+            "secret": parsedConfig.keycloakClientSecret
+        },
+        "bearer-only": true,
+        "verify-token-audience": true,
+        "confidential-port": 0,
+        "ssl-required": parsedConfig.keycloakConfig["ssl-required"]
     },
     "cache": {
         "host": parsedConfig.redisConf.hostname,
