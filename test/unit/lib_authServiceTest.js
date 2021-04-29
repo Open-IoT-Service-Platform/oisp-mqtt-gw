@@ -14,7 +14,6 @@
 * limitations under the License.
 */
 
-
 var assert =  require('chai').assert,
     rewire = require('rewire');
 
@@ -26,65 +25,54 @@ describe(fileToTest, function(){
 
     it('Shall verify and decode token successfully', function(done){
         var decodedToken = {sub: "1234"};
-        var verifier = function() {
-            return decodedToken;
-        };
-        ToTest.__set__("verifier",verifier);
         var me = {
             logger: {
                 info: function() {},
                 debug: function() {}
+            },
+            keycloakAdapter: {
+                grantManager: {
+                    createGrant: () => {
+                        return Promise.resolve({
+                            access_token:  {
+                                content: decodedToken
+                            }
+                        });
+                    }
+                }
             }
         };
         ToTest.__set__("me", me);
         var verifyAndDecodeToken = ToTest.__get__("verifyAndDecodeToken");
-        var result = verifyAndDecodeToken("ex1123");
-        assert.equal(decodedToken, result, "Wrong decoded Token");
-        done();
+        verifyAndDecodeToken("ex1123").then(result => {
+            assert.equal(decodedToken, result, "Wrong decoded Token");
+            done();
+        }).catch(err => {
+            done(err);
+        });
     });
     it('Shall verify and decode token unsuccessfully', function(done){
         var message = "No valid token";
-        var verifier = function() {
-            throw new Error(message);
-        };
-        ToTest.__set__("verifier",verifier);
         var me = {
             logger: {
                 info: function() {},
                 debug: function() {}
+            },
+            keycloakAdapter: {
+                grantManager: {
+                    createGrant: () => {
+                        return Promise.reject(message);
+                    }
+                }
             }
         };
         ToTest.__set__("me", me);
         var verifyAndDecodeToken = ToTest.__get__("verifyAndDecodeToken");
-        var result = verifyAndDecodeToken("ex1123");
-        assert.equal(result, null, "Wrong verfication result");
-        done();
-    });
-    it('Shall receive public key', function(done){
-        var request = function(options, callback) {
-            assert.equal(options.method, "GET", "wrong request method");
-            assert.equal(options.url, "http://keycloakurl:1234/auth/realms/realm", "wrong keycloak url");
-            var response = {
-                statusCode: 200,
-                body: "{\"public_key\": \"publicKey\"}"
-            };
-            callback(null, response);
-        };
-        ToTest.__set__("request",request);
-        var me = {
-            logger: {
-                debug: function() {}
-            }
-        };
-        ToTest.__set__("me", me);
-        var getPublicKeyForRealm = ToTest.__get__("getPublicKeyForRealm");
-        getPublicKeyForRealm("http://keycloakurl:1234/auth", "realm")
-        .then((result) => {
-            assert.equal("-----BEGIN PUBLIC KEY-----\npublicKey\n-----END PUBLIC KEY-----", result, "Incorrect public key received");
+        verifyAndDecodeToken("ex1123").then(result => {
+            assert.equal(result, null, "Wrong verfication result");
             done();
-        })
-        .catch((e) => {
-            done("Unexpected exception: " + e.message);
+        }).catch(err => {
+            done(err);
         });
     });
     it('Shall authenticate super user', function(done){
@@ -96,7 +84,7 @@ describe(fileToTest, function(){
             cache: {
                 port: 1432,
                 host: "cacheHost"
-            } 
+            }
         };
         var CacheFactory = class {
             constructor() {
@@ -116,38 +104,12 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "username",
-                password: "password" 
+                password: "password"
             }
         };
         var res = {
             sendStatus: function(status) {
                 assert.equal(status, 200, "Received wrong status");
-                done();
-            }
-        };
-        var authenticate = new ToTest(config, logger);
-        authenticate.authenticate(req, res);
-    });
-    it('Authentication shall complain about missing public key ', function(done){
-        var config = {
-            broker: {
-                username: "username",
-                password: "password"
-            }   
-        };
-        var logger = {
-            debug: function() {},
-            info: function() {}
-        };
-        var req = {
-            query: {
-                username: "username2",
-                password: "password2" 
-            }
-        };
-        var res = {
-            sendStatus: function(status) {
-                assert.equal(status, 400, "Received wrong status");
                 done();
             }
         };
@@ -156,21 +118,17 @@ describe(fileToTest, function(){
     });
     it('Authentication shall successfully validate a token', function(done){
         var decodedToken = {
-            sub: "deviceId", 
+            sub: "deviceId",
             accounts: [{
                 role: "device",
                 id: "accountId"
             }]
         };
-        var verifier = function() {
-            return decodedToken;
-        };
-        ToTest.__set__("verifier",verifier);
         var config = {
             broker: {
                 username: "username",
                 password: "password"
-            }   
+            }
         };
         var logger = {
             debug: function() {},
@@ -179,7 +137,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                password: "token" 
+                password: "token"
             }
         };
         var res = {
@@ -195,35 +153,36 @@ describe(fileToTest, function(){
                 assert.equal(value, true, "Wrong cache value received.");
             }
         };
-        /*var me = {
-            logger: logger,
-            config: config,
-            public_key: "publicKey",
-            cache: cache
-        };*/
+        var keycloakAdapter = {
+            grantManager: {
+                createGrant: () => {
+                    return Promise.resolve({ access_token: {
+                        content: decodedToken
+                    }});
+                }
+            }
+        };
+
         var authenticate = new ToTest(config, logger);
         var me = ToTest.__get__("me", me);
-        me.public_key = "publicKey";
         me.cache = cache;
+        me.keycloakAdapter = keycloakAdapter;
         authenticate.authenticate(req, res);
     });
     it('Authentication shall detect wrong deviceId in username', function(done){
         var decodedToken = {
-            sub: "deviceId", 
+            sub: "deviceId",
             accounts: [{
                 role: "device",
                 id: "accountId"
             }]
         };
-        var verifier = function() {
-            return decodedToken;
-        };
-        ToTest.__set__("verifier",verifier);
+
         var config = {
             broker: {
                 username: "username",
                 password: "password"
-            }   
+            }
         };
         var logger = {
             debug: function() {},
@@ -232,7 +191,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "wrongDeviceId",
-                password: "token" 
+                password: "token"
             }
         };
         var res = {
@@ -248,35 +207,36 @@ describe(fileToTest, function(){
                 assert.equal(value, true, "Wrong cache value received.");
             }
         };
-        /*var me = {
-            logger: logger,
-            config: config,
-            public_key: "publicKey",
-            cache: cache
-        };*/
+        var keycloakAdapter = {
+            grantManager: {
+                createGrant: () => {
+                    return Promise.resolve({ access_token: {
+                        content: decodedToken
+                    }});
+                }
+            }
+        };
+
         var authenticate = new ToTest(config, logger);
         var me = ToTest.__get__("me");
-        me.public_key = "publicKey";
         me.cache = cache;
+        me.keycloakAdapter = keycloakAdapter;
         authenticate.authenticate(req, res);
     });
     it('Authentication shall detect wrong role in token', function(done){
         var decodedToken = {
-            sub: "deviceId", 
+            sub: "deviceId",
             accounts: [{
                 role: "wrontRole",
                 id: "accountId"
             }]
         };
-        var verifier = function() {
-            return decodedToken;
-        };
-        ToTest.__set__("verifier",verifier);
+
         var config = {
             broker: {
                 username: "username",
                 password: "password"
-            }   
+            }
         };
         var logger = {
             debug: function() {},
@@ -285,7 +245,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                password: "token" 
+                password: "token"
             }
         };
         var res = {
@@ -301,32 +261,39 @@ describe(fileToTest, function(){
                 assert.equal(value, true, "Wrong cache value received.");
             }
         };
+        var keycloakAdapter = {
+            grantManager: {
+                createGrant: () => {
+                    return Promise.resolve({ access_token: {
+                        content: decodedToken
+                    }});
+                }
+            }
+        };
+
         var authenticate = new ToTest(config, logger);
         var me = ToTest.__get__("me");
-        me.public_key = "publicKey";
         me.cache = cache;
+        me.keycloakAdapter = keycloakAdapter;
         authenticate.authenticate(req, res);
     });
     it('Authentication shall detect wrong account array', function(done){
         var decodedToken = {
-            sub: "deviceId", 
+            sub: "deviceId",
             accounts: [{
                 role: "device",
                 id: "accountId"
             }, {
                role: "device",
-               id: "accountId2" 
+               id: "accountId2"
             }]
         };
-        var verifier = function() {
-            return decodedToken;
-        };
-        ToTest.__set__("verifier",verifier);
+
         var config = {
             broker: {
                 username: "username",
                 password: "password"
-            }   
+            }
         };
         var logger = {
             debug: function() {},
@@ -335,7 +302,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                password: "token" 
+                password: "token"
             }
         };
         var res = {
@@ -351,10 +318,20 @@ describe(fileToTest, function(){
                 assert.equal(value, true, "Wrong cache value received.");
             }
         };
+        var keycloakAdapter = {
+            grantManager: {
+                createGrant: () => {
+                    return Promise.resolve({ access_token: {
+                        content: decodedToken
+                    }});
+                }
+            }
+        };
+
         var authenticate = new ToTest(config, logger);
         var me = ToTest.__get__("me");
-        me.public_key = "publicKey";
         me.cache = cache;
+        me.keycloakAdapter = keycloakAdapter;
         authenticate.authenticate(req, res);
     });
 });
@@ -379,7 +356,7 @@ describe(fileToTest, function(){
             broker: {
                 username: "superuser",
                 password: "password"
-            }   
+            }
         };
         var logger = {
             debug: function() {},
@@ -389,7 +366,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "superuser",
-                topic: "topic" 
+                topic: "topic"
             }
         };
         var res = {
@@ -425,7 +402,7 @@ describe(fileToTest, function(){
             broker: {
                 username: "username",
                 password: "password"
-            }   
+            }
         };
         var logger = {
             debug: function() {},
@@ -435,7 +412,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                topic: "/server/metric/" + aidSlashDid 
+                topic: "/server/metric/" + aidSlashDid
             }
         };
         var res = {
@@ -478,7 +455,7 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                topic: "/server/metric/" + "wrong/topic" 
+                topic: "/server/metric/" + "wrong/topic"
             }
         };
         var res = {
@@ -490,7 +467,7 @@ describe(fileToTest, function(){
         req = {
             query: {
                 username: "deviceId",
-                topic: "/server/metric/" + "wrongtopic" 
+                topic: "/server/metric/" + "wrongtopic"
             }
         };
         res = {
