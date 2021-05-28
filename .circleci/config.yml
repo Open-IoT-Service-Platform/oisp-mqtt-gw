@@ -141,7 +141,7 @@ jobs:
           repo: "oisp-mqtt-gw"
       - setup-build-environment
       - pull-images-and-build-only-testbranch:
-          container: "mqtt-broker mqtt-gateway"
+          container: "mqtt-gateway"
       - e2e-test
   build-check:
     executor: docker-executor

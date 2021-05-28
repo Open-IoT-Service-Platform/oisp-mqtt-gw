@@ -55,7 +55,7 @@ var config = {
         "port": parsedConfig.mqttBrokerLocalPort,
         "retain": false,
         "secure": false,
-        "retries": 30,
+        "retries": 120,
         "username": parsedConfig.mqttBrokerUsername,
         "password": parsedConfig.mqttBrokerPassword
     },

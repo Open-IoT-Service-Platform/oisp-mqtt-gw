@@ -124,7 +124,7 @@ describe(fileToTest, function(){
             client.connected = false;
             throw new Error("Invalid Command");
         };
-        
+
         myBroker.connect(function(err) {
             assert.instanceOf(err, Error, "An error shall be returned");
             done();
@@ -189,7 +189,7 @@ describe(fileToTest, function(){
             assert.equal(err.message, "Connection Error", "Invalid Message error  Reported");
             done();
         });
-    });
+    }).timeout(7000);
     it('Shall Publish to Specific Broker Topic >', function(done) {
         toTest.__set__("mqtt", mqtt);
         var config = {
@@ -323,7 +323,7 @@ describe(fileToTest, function(){
         };
         var callHandler = null;
         var client = new mqtt.MqttClient();
-    
+
         client.on = function (event, handler) {
             assert.isFunction(handler, "The handle shall be a function");
             assert.isString(event, "The event shall be string");
