@@ -79,6 +79,7 @@ var config = {
     "kafka": {
       "host": parsedConfig.kafkaConfig.uri,
       "metricsTopic": parsedConfig.kafkaConfig.topicsObservations,
+      "actuationsTopic": parsedConfig.kafkaConfig.topicsActuations,
       "replication": parsedConfig.kafkaConfig.replication,
       "requestTimeout": parsedConfig.kafkaConfig.requestTimeout,
       "maxRetryTime": parsedConfig.kafkaConfig.maxRetryTime,
@@ -94,12 +95,14 @@ var config = {
       "password": parsedConfig.postgresConfig.password
     },
     "topics": {
+        "prefix": parsedConfig.topicsPrefix || "server",
         "subscribe": {
             "data_ingestion": "$share/bridge/server/metric/+/+",
             "health": "server/devices/+/health"
         },
         "publish": {
-            "error": "server/error/{accountId}/{deviceId}"
+            "error": "server/error/{accountId}/{deviceId}",
+            "actuation": "/{accountId}/DCMD/{gatewayId}/{deviceId}"
         }
     },
     "api": {

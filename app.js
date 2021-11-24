@@ -18,6 +18,7 @@
 "use strict";
 var Broker = require("./lib/mqtt/connector"),
     ApiData = require('./api/data.ingestion'),
+    ApiActuation = require('./api/actuation'),
     config = require("./config"),
     logger = require("./lib/logger").init(config),
     authService = require("./lib/authService"),
@@ -32,9 +33,15 @@ var brokerConnector = Broker.singleton(config.broker, logger);
 brokerConnector.connect(function(err) {
     if (!err) {
         // Manage Connections to API Server
-
         var apiDataConnector = new ApiData(logger);
         apiDataConnector.bind(brokerConnector);
+        var apiActuationConnector = new ApiActuation(logger, brokerConnector);
+        apiActuationConnector.start().then(() => {
+            logger.info("Actuation connector connected!");
+        }).catch(err => {
+            logger.error("Actuation connector error: ", err);
+            process.exit(1);
+        });
         health.init(brokerConnector);
     } else {
         logger.error("Error on Broker connection ", err);
