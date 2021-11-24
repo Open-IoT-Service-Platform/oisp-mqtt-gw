@@ -17,8 +17,9 @@
 var assert =  require('chai').assert,
     rewire = require('rewire');
 
-
 var fileToTest = "../../lib/authService/authenticate.js";
+
+const PUBLISH = "2";
 
 describe(fileToTest, function(){
     var ToTest = rewire(fileToTest);
@@ -402,6 +403,9 @@ describe(fileToTest, function(){
             broker: {
                 username: "username",
                 password: "password"
+            },
+            topics: {
+                prefix: "server"
             }
         };
         var logger = {
@@ -412,12 +416,64 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                topic: "/server/metric/" + aidSlashDid
+                topic: "/server/metric/" + aidSlashDid,
+                access: PUBLISH
             }
         };
         var res = {
             sendStatus: function(status) {
                 assert.equal(status, 200, "Received wrong status");
+                done();
+            }
+        };
+        acl.acl(req, res);
+    });
+    it('Shall deny access control to device with wrong access', function(done){
+        var Cache = class Acl {
+            constructor(){
+
+            }
+            getValue(subtopic, key) {
+                assert.equal(aidSlashDid, subtopic, "Wrong accountId/did subtopic");
+                assert.equal(key, "acl", "Wrong key value");
+                return true;
+            }
+        };
+        class CacheFactory {
+            constructor() {
+            }
+            getInstance() {
+                return new Cache();
+            }
+        }
+
+        var aidSlashDid = "accountId/deviceId";
+
+        ToTest.__set__("CacheFactory", CacheFactory);
+        var config = {
+            broker: {
+                username: "username",
+                password: "password"
+            },
+            topics: {
+                prefix: "server"
+            }
+        };
+        var logger = {
+            debug: function() {},
+            info: function() {}
+        };
+        var acl = new ToTest(config, logger);
+        var req = {
+            query: {
+                username: "deviceId",
+                topic: "server/accountId/DCMD/gatewayId/deviceId",
+                access: PUBLISH
+            }
+        };
+        var res = {
+            sendStatus: function(status) {
+                assert.equal(status, 400, "Received wrong status");
                 done();
             }
         };
@@ -429,7 +485,7 @@ describe(fileToTest, function(){
 
             }
             getValue(subtopic, key) {
-                assert.equal(key, "did", "Wrong key value");
+                assert.equal(key, "acl", "Wrong key value");
                 return false;
             }
         };
@@ -445,6 +501,9 @@ describe(fileToTest, function(){
             broker: {
                 username: "username",
                 password: "password"
+            },
+            topics: {
+                prefix: "server"
             }
         };
         var logger = {
@@ -455,22 +514,10 @@ describe(fileToTest, function(){
         var req = {
             query: {
                 username: "deviceId",
-                topic: "/server/metric/" + "wrong/topic"
-            }
-        };
-        var res = {
-            sendStatus: function(status) {
-                assert.equal(status, 400, "Received wrong status");
-            }
-        };
-        acl.acl(req, res);
-        req = {
-            query: {
-                username: "deviceId",
                 topic: "/server/metric/" + "wrongtopic"
             }
         };
-        res = {
+        var res = {
             sendStatus: function(status) {
                 assert.equal(status, 400, "Received wrong status");
                 done();
