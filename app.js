@@ -24,13 +24,10 @@ var Broker = require("./lib/mqtt/connector"),
     authService = require("./lib/authService"),
     health = require('./lib/health');
 
-logger.info("OISP MQTT-gateway authorization agent");
-authService.init(config, logger);
 process.env.APP_ROOT = __dirname;
-
-logger.info("OISP MQTT-Kafka bridge");
 var brokerConnector = Broker.singleton(config.broker, logger);
-brokerConnector.connect(function(err) {
+
+function brokerCb(err) {
     if (!err) {
         // Manage Connections to API Server
         var apiDataConnector = new ApiData(logger);
@@ -47,4 +44,12 @@ brokerConnector.connect(function(err) {
         logger.error("Error on Broker connection ", err);
         process.exit(1);
     }
-});
+}
+
+function authServiceCb() {
+    logger.info("OISP MQTT-Kafka bridge");
+    brokerConnector.connect(brokerCb);
+}
+
+logger.info("OISP MQTT-gateway authorization agent");
+authService.init(config, logger, authServiceCb);
