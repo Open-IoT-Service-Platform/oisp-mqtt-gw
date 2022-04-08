@@ -81,7 +81,7 @@ describe(fileToTest, function() {
         "cache": {
             "hostname": "redis",
             "port": "6379",
-            "password": "password" 
+            "password": "password"
         },
         "kafka": {
             "host": "uri",
@@ -117,6 +117,7 @@ describe(fileToTest, function() {
             producer: function(){
                 return {
                     connect: function() {
+                        return Promise.resolve();
                     },
                     on: function() {
                     },
@@ -128,7 +129,7 @@ describe(fileToTest, function() {
             }
         };
     };
-    
+
     var logger = {
         error: function(){
 
@@ -177,6 +178,7 @@ describe(fileToTest, function() {
                 producer: function(){
                     return {
                         connect: function() {
+                            return Promise.resolve();
                         },
                         on: function() {
                         },
@@ -225,7 +227,7 @@ describe(fileToTest, function() {
                 }
             ]
         };
-    
+
         dataIngestion.processDataIngestion("server/metric/accountId/device", message);
     });
     it('Validate data types', function (done) {
@@ -271,7 +273,7 @@ describe(fileToTest, function() {
                     "systemOn": 2
                 }
         };
-    
+
         var msg = dataIngestion.prepareKafkaPayload(didAndDataType, "accountId");
         var expectedMsg = {
             dataType: "String",

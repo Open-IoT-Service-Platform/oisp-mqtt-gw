@@ -89,34 +89,33 @@ class KafkaAggregator {
         this.logger = logger;
         this.messageArray = [];
         var brokers = config.kafka.host.split(',');
-        try {
-            const kafka = new Kafka({
-                logLevel: logLevel.INFO,
-                brokers: brokers,
-                clientId: 'frontend-metrics',
-                requestTimeout: config.kafka.requestTimeout,
-                retry: {
-                    maxRetryTime: config.kafka.maxRetryTime,
-                    retries: config.kafka.retries
-                }
-            });
-            if (config.kafka.partitioner === "roundRobinPartitioner") {
-                this.kafkaProducer = kafka.producer({createPartitioner: RoundRobinPartitioner});
-                this.logger.info("Round Robin partitioner enforced");
-            } else {
-                this.kafkaProducer = kafka.producer({createPartitioner: Partitioners.DefaultPartitioner});
-                this.logger.info("Default partitioner is used");
+        const kafka = new Kafka({
+            logLevel: logLevel.INFO,
+            brokers: brokers,
+            clientId: 'frontend-metrics',
+            requestTimeout: config.kafka.requestTimeout,
+            retry: {
+                maxRetryTime: config.kafka.maxRetryTime,
+                retries: config.kafka.retries
             }
-            const { CONNECT, DISCONNECT } = this.kafkaProducer.events;
-            this.kafkaProducer.on(DISCONNECT, e => {
-                console.log(`Metric producer disconnected!: ${e.timestamp}`);
-                this.kafkaProducer.connect();
-            });
-            this.kafkaProducer.on(CONNECT, e => logger.debug("Kafka metric producer connected: " + e));
+        });
+        if (config.kafka.partitioner === "roundRobinPartitioner") {
+            this.kafkaProducer = kafka.producer({createPartitioner: RoundRobinPartitioner});
+            this.logger.info("Round Robin partitioner enforced");
+        } else {
+            this.kafkaProducer = kafka.producer({createPartitioner: Partitioners.DefaultPartitioner});
+            this.logger.info("Default partitioner is used");
+        }
+        const { CONNECT, DISCONNECT } = this.kafkaProducer.events;
+        this.kafkaProducer.on(DISCONNECT, e => {
+            this.logger.log(`Metric producer disconnected!: ${e.timestamp}`);
             this.kafkaProducer.connect();
-          } catch(e) {
-              this.logger.error("Exception occured while creating Kafka Producer: " + e);
-          }
+        });
+        this.kafkaProducer.on(CONNECT, e => logger.debug("Kafka metric producer connected: " + e));
+        this.kafkaProducer.connect().catch(e => {
+            this.logger.error("Exception occured while creating Kafka Producer: " + e);
+            process.exit(1);
+        });
     }
     start(timer) {
         this.intervalObj = setInterval(() => {
