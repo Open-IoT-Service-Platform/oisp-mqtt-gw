@@ -80,27 +80,23 @@ class ActuationConsumer {
         this.logger = logger;
         this.mqttBroker = mqttBroker;
         var brokers = config.kafka.host.split(",");
-        try {
-            const kafka = new Kafka({
-                logLevel: logLevel.INFO,
-                brokers: brokers,
-                clientId: "frontend-actuations",
-                requestTimeout: config.kafka.requestTimeout,
-                retry: {
-                    maxRetryTime: config.kafka.maxRetryTime,
-                    retries: config.kafka.retries
-                }
-            });
-            this.kafkaConsumer = kafka.consumer({ groupId: "actuation-consumer-group"});
-            const { CONNECT, DISCONNECT } = this.kafkaConsumer.events;
-            this.kafkaConsumer.on(DISCONNECT, e => {
-                this.logger.error(`Actuation consumer disconnected!: ${e.timestamp}`);
-                this.kafkaConsumer.connect();
-            });
-            this.kafkaConsumer.on(CONNECT, e => this.logger.info("Kafka actuation consumer connected: " + e));
-          } catch(e) {
-              this.logger.error("Exception occured while creating Kafka Consumer: " + e);
-          }
+        const kafka = new Kafka({
+            logLevel: logLevel.INFO,
+            brokers: brokers,
+            clientId: "frontend-actuations",
+            requestTimeout: config.kafka.requestTimeout,
+            retry: {
+                maxRetryTime: config.kafka.maxRetryTime,
+                retries: config.kafka.retries
+            }
+        });
+        this.kafkaConsumer = kafka.consumer({ groupId: "actuation-consumer-group"});
+        const { CONNECT, DISCONNECT } = this.kafkaConsumer.events;
+        this.kafkaConsumer.on(DISCONNECT, e => {
+            this.logger.error(`Actuation consumer disconnected!: ${e.timestamp}`);
+            this.kafkaConsumer.connect();
+        });
+        this.kafkaConsumer.on(CONNECT, e => this.logger.info("Kafka actuation consumer connected: " + e));
     }
 
     start() {
@@ -109,7 +105,8 @@ class ActuationConsumer {
         }).then(() => {
             return this.kafkaConsumer.run({ eachMessage: this.messageHandler() });
         }).catch(err => {
-            return this.logger.error("Starting kafka actuation consumer failed: " + err);
+            this.logger.error("Starting kafka actuation consumer failed: " + err);
+            process.exit(1);
         });
     }
 
