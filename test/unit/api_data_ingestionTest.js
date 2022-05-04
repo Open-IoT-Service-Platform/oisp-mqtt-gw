@@ -76,7 +76,9 @@ describe(fileToTest, function() {
         "mqttBrokerPassword": "brokerPassword",
         "authServicePort": "2345",
         "topics": {
-            "subscribe": "topic/subscribe"
+            "subscribe": {
+                "data_ingestion": "$share/bridge/server/metric/+/+"
+            }
         },
         "cache": {
             "hostname": "redis",
@@ -141,6 +143,25 @@ describe(fileToTest, function() {
 
         }
     };
+    var broker = {
+        bind : function(subscribeTopics){
+            assert.equal(subscribeTopics,"$share/bridge/server/metric/+/+","sparkplugb Topic subscribed");
+            return true;
+        },
+        on : function(){
+            return true;
+        },
+        unbind : function(){
+            return true;
+        },
+        publish : function(){
+            return true;
+        },
+        buildPath : function(){
+            return true;
+        }
+    };
+
     class KafkaAggregator {
         start(){}
         stop(){}
@@ -153,8 +174,8 @@ describe(fileToTest, function() {
         }
         getInstance() {
             return {
-                getDidAndDataType: function() {
-
+                getDidAndDataType: function(getDidAndData) {
+                    return getDidAndData;
                 }
             };
         }
@@ -256,6 +277,16 @@ describe(fileToTest, function() {
         assert.equal(normalizeBoolean(2, "Boolean"), "NaB", "Error in Validation");
         done();
     });
+    it('Shall check mqtt bind to topic', function (done) {
+        ToTest.__set__("Kafka", Kafka);
+        ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("config", config);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
+        var dataIngestion = new ToTest(logger);
+        dataIngestion.bind(broker);
+        done();
+    });
+
     it('Shall prepare Kafka payload', function (done) {
         ToTest.__set__("Kafka", Kafka);
         ToTest.__set__("CacheFactory", CacheFactory);
@@ -284,6 +315,95 @@ describe(fileToTest, function() {
             systemOn: 2
         };
         assert.deepEqual(msg, expectedMsg, "Wrong kafka payload");
+        done();
+    });
+
+    it('Shall prepare Kafka payload for kafka topic with loc and attributes', function (done) {
+        ToTest.__set__("Kafka", Kafka);
+        ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("config", config);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
+        var dataIngestion = new ToTest(logger);
+        var didAndDataType = {
+            dataType: "String",
+            on: 1,
+            dataElement:
+                {
+                    "componentId": cid,
+                    "on": 1,
+                    "value": "value",
+                    "systemOn": 2,
+                    "attributes": {
+                        hardware_model : "linux" 
+                    },
+                    loc : {
+                        lat : 88,
+                        long : 64
+                    }
+                }
+        };
+    
+        var msg = dataIngestion.prepareKafkaPayload(didAndDataType, "accountId");
+        var expectedMsg = {
+            dataType: "String",
+            aid: "accountId",
+            value: "value",
+            cid: cid,
+            on: 1,
+            systemOn: 2,
+            attributes: {
+                hardware_model : "linux" 
+            },
+            loc : {
+                lat : 88,
+                long : 64
+            }   
+        };
+        assert.deepEqual(msg, expectedMsg, "Wrong kafka payload");
+        done();
+    });
+
+    it('Process data Ingestion with missing data field in received payload', function (done) {
+        ToTest.__set__("Kafka", Kafka);
+        ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("config", config);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
+        var dataIngestion = new ToTest(logger);
+        var message = {
+            accountId: "accountId",
+            on: 1,
+            data: [{}]
+        };
+
+        let processDataIngestReturn = dataIngestion.processDataIngestion("server/metric/accountId/device", message);
+        assert.deepEqual(processDataIngestReturn, null, "Unable to validate Metric message received schema");
+        done();
+    });
+
+    it('Shall processdataIngestion return undefined due to null return on preparekafkafkapayload of datatype', function (done) {
+        var prepareKafkaPayload = function(){
+            return null;
+        };
+        ToTest.__set__("Kafka", Kafka);
+        ToTest.__set__("config", config);
+        ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
+
+        var dataIngestion = new ToTest(logger);
+        dataIngestion.prepareKafkaPayload = prepareKafkaPayload;
+        var message = {
+            accountId: "accountId",
+            on: 1,
+            data: [
+                {
+                    "componentId": cid,
+                    "on": 1,
+                    "value": "value"
+                }
+            ]
+        };
+        var KafkaProcessDataIngestionReturn = dataIngestion.processDataIngestion("server/metric/accountId/device", message);
+        assert.deepEqual(KafkaProcessDataIngestionReturn, undefined, " Able to process data ingestion with null preparekafka payload");
         done();
     });
 });

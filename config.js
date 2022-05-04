@@ -17,7 +17,7 @@
 var fs = require('fs');
 var loglevel = process.env.LOGLEVEL;
 if (loglevel === undefined) {
-    loglevel = "info"; //Default verbosity
+    loglevel = "debug"; //Default verbosity
 }
 
 var extractConfig = function(envVar) {
@@ -103,6 +103,27 @@ var config = {
         "publish": {
             "error": "server/error/{accountId}/{deviceId}",
             "actuation": "/{accountId}/DCMD/{gatewayId}/{deviceId}"
+        }
+    },
+    /*SparkplugB config which must be set when handling SparplugB standard message
+    * @enabled: true -> it enables the spB message handlers and parsing functionality at GW
+    * @spBKafkaProduce: true -> will enable producing kafka message on topic "SparkplugB" with spB format data 
+    * @ngsildKafkaProduce: true -> will enable producing kafka message on topic "ngsildSpB" with ngsild format data for Metrics 
+    *  - with name : "Relationship/xxxxx" OR "Properties/xxxx"
+    * 
+    */
+    "sparkplug": {
+        "spBKafkaProduce": false, 
+        "spBkafKaTopic": "sparkplugB",
+        "ngsildKafkaProduce": false,
+        "ngsildKafkaTopic": "ngsildSpB",
+        "topics": {
+            "subscribe": {
+                "sparkplugb_data_ingestion": "spBv1.0/+/+/+/+"
+            },
+            "publish": {
+            "error": "server/error/{accountId}/{deviceId}"
+             }
         }
     },
     "api": {
