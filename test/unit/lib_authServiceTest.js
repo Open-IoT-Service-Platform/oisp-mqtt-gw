@@ -170,6 +170,63 @@ describe(fileToTest, function(){
         me.keycloakAdapter = keycloakAdapter;
         authenticate.authenticate(req, res);
     });
+
+    it('Authentication shall successfully validate a token with gatewayid', function(done){
+        var decodedToken = {
+            sub: "deviceId",
+            gateway: "gatewayId",
+            accounts: [{
+                role: "device",
+                id: "accountId"
+            }]
+        };
+        var config = {
+            broker: {
+                username: "username",
+                password: "password"
+            }
+        };
+        var logger = {
+            debug: function() {},
+            info: function() {}
+        };
+        var req = {
+            query: {
+                username: "deviceId",
+                password: "token"
+            }
+        };
+        var res = {
+            sendStatus: function(status) {
+                assert.equal(status, 200, "Received wrong status");
+                done();
+            }
+        };
+        var cache = {
+            setValue: function(key, type, value) {
+                assert.oneOf(key,["accountId/deviceId" , "accountId/gatewayId"], "Wrong cache value received.");
+                assert.equal(type, "acl", "Wrong cache value received.");
+                assert.equal(value, true, "Wrong cache value received.");
+                return;
+            }
+        };
+        var keycloakAdapter = {
+            grantManager: {
+                createGrant: () => {
+                    return Promise.resolve({ access_token: {
+                        content: decodedToken
+                    }});
+                }
+            }
+        };
+
+        var authenticate = new ToTest(config, logger);
+        var me = ToTest.__get__("me", me);
+        me.cache = cache;
+        me.keycloakAdapter = keycloakAdapter;
+        authenticate.authenticate(req, res);
+    });
+
     it('Authentication shall detect wrong deviceId in username', function(done){
         var decodedToken = {
             sub: "deviceId",
@@ -378,6 +435,197 @@ describe(fileToTest, function(){
         };
         acl.acl(req, res);
     });
+
+
+    it('Shall give access control to SparkPlugB device DBIRTH', function(done){
+        var Cache = class Acl {
+            constructor(){
+
+            }
+            getValue(subtopic, key) {
+                assert.equal(aidSlashDid, subtopic, "Wrong accountId/did subtopic");
+                assert.equal(key, "acl", "Wrong key value");
+                return true;
+            }
+        };
+        class CacheFactory {
+            constructor() {
+            }
+            getInstance() {
+                return new Cache();
+            }
+        }
+        var aidSlashDid = "accountId/deviceId";
+
+        ToTest.__set__("CacheFactory", CacheFactory);
+        var config = {
+            broker: {
+                username: "username",
+                password: "password"
+            }
+        };
+        var logger = {
+            debug: function() {},
+            info: function() {}
+        };
+        var acl = new ToTest(config, logger);
+        var req = {
+            query: {
+                username: "deviceId",
+                topic: "spBv1.0/accountId/DBIRTH/eonID/deviceId"
+            }
+        };
+        var res = {
+            sendStatus: function(status) {
+                assert.equal(status, 200, "Received wrong status");
+                done();
+            }
+        };
+        acl.acl(req, res);
+    });
+
+    it('Shall give access control to SparkPlugB device DDATA', function(done){
+        var Cache = class Acl {
+            constructor(){
+
+            }
+            getValue(subtopic, key) {
+                assert.equal(aidSlashDid, subtopic, "Wrong accountId/did subtopic");
+                assert.equal(key, "acl", "Wrong key value");
+                return true;
+            }
+        };
+        class CacheFactory {
+            constructor() {
+            }
+            getInstance() {
+                return new Cache();
+            }
+        }
+        var aidSlashDid = "accountId/deviceId";
+
+        ToTest.__set__("CacheFactory", CacheFactory);
+        var config = {
+            broker: {
+                username: "username",
+                password: "password"
+            }
+        };
+        var logger = {
+            debug: function() {},
+            info: function() {}
+        };
+        var acl = new ToTest(config, logger);
+        var req = {
+            query: {
+                username: "deviceId",
+                topic: "spBv1.0/accountId/DDATA/eonID/deviceId"
+            }
+        };
+        var res = {
+            sendStatus: function(status) {
+                assert.equal(status, 200, "Received wrong status");
+                done();
+            }
+        };
+        acl.acl(req, res);
+    });
+
+
+    it('Shall give access control to SparkPlugB device NBIRTH', function(done){
+        var Cache = class Acl {
+            constructor(){
+
+            }
+            getValue(subtopic, key) {
+                assert.equal(aidSlashNid, subtopic, "Wrong accountId/Gatewayid subtopic");
+                assert.equal(key, "acl", "Wrong key value");
+                return true;
+            }
+        };
+        class CacheFactory {
+            constructor() {
+            }
+            getInstance() {
+                return new Cache();
+            }
+        }
+        var aidSlashNid = "accountId/gatewayId";
+
+        ToTest.__set__("CacheFactory", CacheFactory);
+        var config = {
+            broker: {
+                username: "username",
+                password: "password"
+            }
+        };
+        var logger = {
+            debug: function() {},
+            info: function() {}
+        };
+        var acl = new ToTest(config, logger);
+        var req = {
+            query: {
+                username: "deviceId",
+                topic: "spBv1.0/accountId/NBIRTH/gatewayId"
+            }
+        };
+        var res = {
+            sendStatus: function(status) {
+                assert.equal(status, 200, "Received wrong status");
+                done();
+            }
+        };
+        acl.acl(req, res);
+    });
+    
+    it('Shall give access control to SparkPlugB device NCMD', function(done){
+        var Cache = class Acl {
+            constructor(){
+
+            }
+            getValue(subtopic, key) {
+                assert.equal(aidSlashNid, subtopic, "Wrong accountId/gatewayid subtopic");
+                assert.equal(key, "acl", "Wrong key value");
+                return true;
+            }
+        };
+        class CacheFactory {
+            constructor() {
+            }
+            getInstance() {
+                return new Cache();
+            }
+        }
+        var aidSlashNid = "accountId/gatewayId";
+
+        ToTest.__set__("CacheFactory", CacheFactory);
+        var config = {
+            broker: {
+                username: "username",
+                password: "password"
+            }
+        };
+        var logger = {
+            debug: function() {},
+            info: function() {}
+        };
+        var acl = new ToTest(config, logger);
+        var req = {
+            query: {
+                username: "deviceId",
+                topic: "spBv1.0/accountId/NCMD/gatewayId"
+            }
+        };
+        var res = {
+            sendStatus: function(status) {
+                assert.equal(status, 200, "Received wrong status");
+                done();
+            }
+        };
+        acl.acl(req, res);
+    });
+
     it('Shall give access control to device', function(done){
         var Cache = class Acl {
             constructor(){
