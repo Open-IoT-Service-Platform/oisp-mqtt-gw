@@ -393,7 +393,52 @@
         },
         "additionalProperties": false
     },
-
+    "SPARKPLUGB": {
+        "type": "object",
+        "properties": {
+            "timestamp": {
+                "type": "number",
+                "required": true
+            },
+            "metrics": {
+                "type": "array",
+                "required": true,
+                "minItems": 1,
+                "maxItems": 1024,
+                "items": {
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "required": true
+                        },
+                        "alias": {
+                            "type": "string",
+                            "format": "uuid",
+                            "required": true
+                        },
+                        "timestamp": {
+                            "type": "number",
+                            "required": true
+                        },
+                        "dataType": {
+                            "type": "string",
+                            "required": true
+                        },
+                        "value": {
+                            "type": ["number", "string", "boolean"],
+                            "required": true
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "seq": {
+                "type": "number",
+                "required": true
+            },
+        "additionalProperties": false
+        }
+    },
     "FIRST_LAST_MEASUREMENT": {
         "type": "object",
         "properties": {

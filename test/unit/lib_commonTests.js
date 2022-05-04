@@ -59,4 +59,19 @@ describe(fileToTest, function() {
         assert.equal(newPath1, "to_build/act/tion/xxx}", "Invalid Conversion");
         done();
     });
+
+    it('shall give proper time  ', function (done) {
+        var testTimestamp =  toTest.time.timeStamp();
+        toTest.time.epochTime(new Date());
+        toTest.time.newTimeStamp();
+        assert.isAtMost(testTimestamp, new Date().getTime() , "Invalid Test time");
+        done();
+    });
+
+    it('shall get device id > ', function (done) {
+        var myTopic = "xx/yyyy/deviceId";
+        var deviceid = toTest.getDeviceFromServerTopic(myTopic);
+        assert.equal(deviceid, "deviceId", "Invalid Conversion");
+        done();
+    });
 });

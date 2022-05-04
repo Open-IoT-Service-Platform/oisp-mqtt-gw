@@ -191,8 +191,10 @@ module.exports = function(logger) {
             bodyMessage = message.body;
         }
 
-        if (!validator.validate(bodyMessage, dataSchema["POST"])) {
+        let validationResult = validator.validate(bodyMessage, dataSchema["POST"]);
+        if (validationResult.errors.length > 0) {
             me.logger.info("Schema rejected message! Message will be discarded: " + bodyMessage);
+            return null;
         } else {
             //Get accountId
             var match = topic.match(/server\/metric\/([^\/]*)\/(.*)/);
