@@ -81,7 +81,60 @@ describe(fileToTest, function() {
         "sparkplug": {
             "spBKafkaProduce": true,
             "spBkafkaTopic": "sparkplugB",
-            "ngsildKafkaProduce": false,
+            "ngsildKafkaProduce": true,
+            "ngsildKafkaTopic": "ngsildSpB",
+            "topics": {
+                "subscribe": {
+                    "sparkplugb_data_ingestion": "spBv1.0/+/+/+/+",
+                }
+            }
+        },
+        "cache": {
+            "hostname": "redis",
+            "port": "6379",
+            "password": "password"
+        },
+        "kafka": {
+            "host": "uri",
+            "partitions": 1,
+            "metricsPartitions": 1,
+            "replication": 1,
+            "timeoutMs": 10000,
+            "metricsTopic": "metricsTopic",
+            "topicsRuleEngine": "rules-update",
+            "topicsHeartbeatName": "heartbeat",
+            "topicsHeartbeatInterval": 5000,
+            "maxPayloadSize": 1234456,
+            "retries": 10,
+            "requestTimeout": 4,
+            "maxRetryTime": 10
+        },
+        "postgres": {
+            "dbname": "oisp",
+            "hostname": "postgres-ro",
+            "writeHostname": "postgres",
+            "port": "5432",
+            "su_username": "su_username",
+            "su_password": "su_password",
+            "username": "username",
+            "password": "password"
+        },
+        "aesKey": "/app/keys/mqtt/mqtt_gw_secret.key"
+    };
+
+    var config_ngsild = {
+        "mqttBrokerUrl": "brokerUrl",
+        "mqttBrokerLocalPort": "1234",
+        "mqttBrokerUsername": "brokerUsername",
+        "mqttBrokerPassword": "brokerPassword",
+        "authServicePort": "2345",
+        "topics": {
+            "subscribe": "topic/subscribe"
+        },
+        "sparkplug": {
+            "spBKafkaProduce": false,
+            "spBkafkaTopic": "sparkplugB",
+            "ngsildKafkaProduce": true,
             "ngsildKafkaTopic": "ngsildSpB",
             "topics": {
                 "subscribe": {
@@ -121,6 +174,7 @@ describe(fileToTest, function() {
         },
         "aesKey": "/app/keys/mqtt/mqtt_gw_secret.key"
     };
+
     var ToTest = rewire(fileToTest);
 
     var Kafka = function() {
@@ -710,7 +764,8 @@ describe(fileToTest, function() {
                         },
                         send: function(payload) {
                             message = payload.messages[0];
-                            assert.oneOf(message.key,["spBv1.0/accountId/NBIRTH/eonID/","spBv1.0/accountId/DBIRTH/eonID/deviceId", "spBv1.0/accountId/DDATA/eonID/deviceId" ],"Received Kafka payload key not correct");
+                            assert.oneOf(message.key,["spBv1.0/accountId/NBIRTH/eonID/", "spBv1.0/accountId/DBIRTH/eonID/deviceId",
+                                                      "spBv1.0/accountId/DDATA/eonID/deviceId" ],"Received Kafka payload key not correct");
                             var value = {
                                 "id" : "deviceId" + "\\" + "https://industry-fusion.com/types/v0.9/hasFilter",
                                 "entityId" : "deviceId",
@@ -818,7 +873,7 @@ describe(fileToTest, function() {
                 on: 1,
                 dataElement:
                     {
-                        name : "Properties/https://industry-fusion.com/types/v0.9/hasFilter",
+                        name : "Property/https://industry-fusion.com/types/v0.9/hasFilter",
                         alias : cid,
                         timestamp : 12345,
                         dataType : "string",
@@ -831,7 +886,7 @@ describe(fileToTest, function() {
         config.sparkplug.spBKafkaProduce = true;
         config.sparkplug.ngsildKafkaProduce = true;
         ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("config", config);
+        ToTest.__set__("config", config_ngsild);
         ToTest.__set__("CacheFactory", CacheFactory);
         ToTest.__set__("KafkaAggregator", origKafkaAggregator);
 
@@ -841,7 +896,7 @@ describe(fileToTest, function() {
         var message = {
             timestamp: 12345,
             metrics: [{
-                name : "Properties/https://industry-fusion.com/types/v0.9/hasFilter",
+                name : "Property/https://industry-fusion.com/types/v0.9/hasFilter",
                 alias : cid,
                 timestamp : 12345,
                 dataType : "Uint64",
