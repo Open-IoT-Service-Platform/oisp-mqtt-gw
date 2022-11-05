@@ -338,8 +338,6 @@ module.exports = function(logger) {
                 }
                 /**Validating component id in the database to check for DDATA */
                else if (subTopic[2] === "DDATA" || subTopic[2] === "DBIRTH") {
-                    let metricName = kafkaMessage.name.split("/");
-                    let metricType = metricName[0];
                     me.getSpBDidAndDataType(item).then(values => {
                         if (values) {
                             me.logger.debug("SpB payload is valid with component registered." + kafkaMessage.name);
