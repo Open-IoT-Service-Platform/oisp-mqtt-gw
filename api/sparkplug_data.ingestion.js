@@ -252,7 +252,7 @@ module.exports = function(logger) {
                     return false;
                 }   
             } else if ( subTopic[2] === "DDATA" || subTopic[2] === "DBIRTH" || subTopic[2] === "DDEATH" || subTopic[2] === "NDATA" ) {
-                var redisSeq= await me.cache.getValue(redisSeqKey, "seq");
+                var redisSeq = await me.cache.getValue(redisSeqKey, "seq");
                 if (redisSeq === null || redisSeq === undefined) {
                     me.logger.warn("Could not load seq value from redis for topic: "+ subTopic[2] +" and dev :"+ devID);
                     return false;            
@@ -345,17 +345,6 @@ module.exports = function(logger) {
                             me.logger.debug("SpB payload is valid with component registered." + kafkaMessage.name);
                             var key = topic;
                             var addMessageTopic = config.sparkplug.spBkafKaTopic;
-                            if( config.sparkplug.ngsildKafkaProduce) {
-                                if (metricType === "Relationship") {
-                                    kafkaMessage = ngsildMapper.mapSpbRelationshipToKafka(devID, kafkaMessage);
-                                    me.logger.debug("Mapped SpB Relationship data to NGSI-LD relationship type:  "+ JSON.stringify(kafkaMessage));
-                                    addMessageTopic = config.sparkplug.ngsildKafkaTopic;
-                                } else if (metricType === "Properties") {
-                                    kafkaMessage = ngsildMapper.mapSpbPropertyToKafka(devID, kafkaMessage);
-                                    me.logger.debug("Mapped SpB Properties data to NGSI-LD properties type:  "+ JSON.stringify(kafkaMessage));
-                                    addMessageTopic = config.sparkplug.ngsildKafkaTopic;
-                                }
-                            }
                             let message = {key, value: JSON.stringify(kafkaMessage)};
                             me.kafkaAggregator.addMessage(message, addMessageTopic);
                             return true;
@@ -366,7 +355,8 @@ module.exports = function(logger) {
                     });
                 }           
             });
-        } else if ( !config.sparkplug.spBKafkaProduce && config.sparkplug.ngsildKafkaProduce) {
+        }
+        if ( config.sparkplug.ngsildKafkaProduce) {
             /* Validating each component of metric payload if they are valid or not
             * By verifying there existence in DB or cache
             */
@@ -390,7 +380,7 @@ module.exports = function(logger) {
                                 me.logger.debug(" Mapped SpB Relationship data to NGSI-LD relationship type:  "+ JSON.stringify(ngsiMappedKafkaMessage));
                                 let message = {key, value: JSON.stringify(ngsiMappedKafkaMessage)};
                                 me.kafkaAggregator.addMessage(message, config.sparkplug.ngsildKafkaTopic);
-                            } else if (metricType === "Properties") {
+                            } else if (metricType === "Property") {
                                 ngsiMappedKafkaMessage = ngsildMapper.mapSpbPropertyToKafka(devID, kafkaMessage);
                                 me.logger.debug(" Mapped SpB Properties data to NGSI-LD properties type:  "+ JSON.stringify(ngsiMappedKafkaMessage));
                                 let message = {key, value: JSON.stringify(ngsiMappedKafkaMessage)};

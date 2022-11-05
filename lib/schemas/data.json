@@ -414,7 +414,7 @@
                         "alias": {
                             "type": "string",
                             "format": "uuid",
-                            "required": true
+                            "required": false
                         },
                         "timestamp": {
                             "type": "number",
