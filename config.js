@@ -113,10 +113,10 @@ var config = {
     * 
     */
     "sparkplug": {
-        "spBKafkaProduce": false, 
-        "spBkafKaTopic": "sparkplugB",
-        "ngsildKafkaProduce": false,
-        "ngsildKafkaTopic": "ngsildSpB",
+        "spBKafkaProduce": parsedConfig.spbEnable || false,
+        "spBkafKaTopic": parsedConfig.spbTopic || "sparkplugB",
+        "ngsildKafkaProduce": parsedConfig.ngsildEnable || false,
+        "ngsildKafkaTopic": parsedConfig.ngsildTopic || "ngsildSpB",
         "topics": {
             "subscribe": {
                 "sparkplugb_data_ingestion": "spBv1.0/+/+/+/+"
