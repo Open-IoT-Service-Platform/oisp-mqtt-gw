@@ -360,12 +360,12 @@ module.exports = function(logger) {
             */
             bodyMessage.metrics.forEach(item => {
                 let kafkaMessage = item;
-                if (subTopic[2] === "NBIRTH") {
-                    me.logger.info("Received spB NBIRTH message, ignoring currently kafka forward for SpBNGSI-LD topic");
+                if (subTopic[2] === "NBIRTH" || subTopic[2] === "DBIRTH") {
+                    me.logger.info("Received spB NBIRTH/DBIRTH message, ignoring currently kafka forward for SpBNGSI-LD topic");
                     return true;
                 }
                 /**Validating component id in the database to check for DDATA */
-               else if (subTopic[2] === "DDATA" || subTopic[2] === "DBIRTH") {
+               else if (subTopic[2] === "DDATA") {
                     let metricName = kafkaMessage.name.split("/");
                     let metricType = metricName[0];
                     me.getSpBDidAndDataType(item).then(values => {
