@@ -18,6 +18,10 @@ jobs:
         repository: Open-IoT-Service-Platform/platform-launcher.git
         ref: 'develop'
         path: platform-launcher
+    - uses: actions/checkout@v3
+      with:
+        repository: IndustryFusion/DigitalTwin
+        path: DigitalTwin
     - name: Setup main repo + subrepos
       shell: bash
       run: |
@@ -43,7 +47,33 @@ jobs:
         else
           make restart-cluster
         fi
-
+    - name: Prepare Digital Twin
+      working-directory: DigitalTwin
+      shell: bash
+      run: |
+        if [ -z "${SELF_HOSTED_RUNNER}" ]; then
+          ( cd ./test && bash ./prepare-platform.sh )
+        else
+          ( cd ./test && bash ./prepare-platform-for-self-hosted-runner.sh )
+        fi
+    - name: Prepare Bats Framework
+      working-directory: DigitalTwin
+      shell: bash
+      run: |
+        cd ./test/bats
+        bash ./prepare-test.sh
+        bats linting.bats
+        shellcheck *.sh *.bats test-*/*.bats
+    - name: Build Digital Twin locally
+      working-directory: DigitalTwin
+      shell: bash
+      run: |
+        cd ./test && bash build-local-platform.sh
+    - name: Install Digital Twin from local registry
+      working-directory: DigitalTwin
+      shell: bash
+      run: |
+        cd ./test && bash install-local-platform.sh
     - name: Build platform
       working-directory: platform-launcher
       shell: bash
@@ -51,7 +81,6 @@ jobs:
         set +o pipefail
         export TERM=vt100
         yes | DOCKER_TAG=test NODOCKERLOGIN=true DEBUG=true make build
-
     - name: E2E Test
       id: e2etest
       working-directory: platform-launcher
@@ -78,7 +107,3 @@ jobs:
         done
         echo Test return value: ${retval}
         exit ${retval}
-
-    - name: debug with upterm
-      if: failure()
-      uses: lhotari/action-upterm@v1
