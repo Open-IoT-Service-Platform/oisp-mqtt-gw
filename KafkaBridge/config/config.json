@@ -1,0 +1,53 @@
+
+{	
+	"kafka": {
+		"brokers": ["my-cluster-kafka-bootstrap.iff:9092"]
+	},
+	"alerta": {
+		"topic": "iff.alerts",
+		"hostname": "alerta",
+		"port": "8080",
+		"protocol": "http:",
+		"accessKeyVariable": "ALERTA_API_KEY"
+	},
+	"logger": {
+		"loglevel": "debug"
+	},
+	"keycloak": {
+		"ngsildUpdatesAuthService": {
+			"auth-server-url":  "http://keycloak.local/auth",
+			"realm": "iff",
+			"clientId": "ngsild-updates",
+			"resource": "ngsild-updates",
+			"secret": "secret",
+			"bearer-only": true,
+			"verify-token-audience": false,
+			"ssl-required": false
+		}
+	},
+	"ngsildUpdates": {
+		"topic": "iff.ngsild-updates",
+		"refreshIntervalInSeconds": 200,
+		"clientSecretVariable": "NGSILD_UPDATES_CLIENT_SECRET"
+	},        
+	"ngsildServer": {
+		"hostname": "gateway",
+		"protocol": "http:",
+		"port": 9090
+	},
+	"debeziumBridge": {
+		"topic": "iff.ngsild.public.entity",
+		"entityTopicPrefix": "iff.ngsild.entities",
+		"attributesTopic": "iff.ngsild.attributes",
+		"rdfSources": ["../config/knowledge.ttl"]
+	},
+	"bridgeCommon": {
+		"kafkaSyncOnAttribute": "https://industry-fusion.com/types/v0.9/metadata/kafkaSyncOn"
+	},
+	"kairosdb": {
+		"topic": "iff.ngsild.attributes",
+		"hostname": "kairosdb.oisp",
+		"port": "8080",
+		"protocol": "http:"
+	}
+}
