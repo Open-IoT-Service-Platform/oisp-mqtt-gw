@@ -61,7 +61,7 @@ The Bridge also handles the auth, acl and load-balancing for MQTT and MQTT with 
 
 @ngsildKafkaProduce: true -> will enable producing kafka message on topic "ngsildSpB" with ngsild format data for 
     metric whose names are like :
-        name: "Relationship/xxxx" or "Properties/xxxx"
+        name: "Relationship/xxxx" or "Property/xxxx"
 
 ``` bash
      "sparkplug": {
@@ -131,7 +131,7 @@ Eg. of SpB Converted into NGSI-LD Relationship data format:
     "timestamp":1655974018778,"
     "metrics":
 	    [{
-	    "name":"Properties//https://industry-fusion.com/types/v0.9/state",
+	    "name":"Property/https://industry-fusion.com/types/v0.9/state",
 	    "alias":"fbb3b7cd-a5ff-491b-ad61-d43edf513b7a",
 	    "timestamp":1655974018777,
 	    "dataType":"string",
