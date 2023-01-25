@@ -431,6 +431,32 @@ describe(fileToTest, function() {
         .catch((e) => done(e));
     });
 
+    
+    it(' Send Warning message for INVALID SparkplugB Device Data message with device seq >255', function (done) {
+        ToTest.__set__("Kafka", Kafka);
+        ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("config", config);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
+        var spbdataIngestion = new ToTest(logger);
+        var DataMessage = {
+            timestamp: 12345,
+            metrics: [{
+                name : "temp",
+                alias : cid,
+                timestamp : 12345,
+                dataType : "Uint64",
+                value: 123
+            }],
+            seq: 256
+         };
+        spbdataIngestion.validateSpbDevSeq("spBv1.0/accountId/DDATA/eonID/deviceId",DataMessage)
+        .then((result) => {
+            assert.deepEqual(result, false, "Invalid Seq for Data Message received");
+            done();
+        })
+        .catch((e) => done(e));
+    });
+
     it('Verify SparkplugB metric existence and get its DeviceId and dataType from cache using alias Id', function (done) {
         ToTest.__set__("Kafka", Kafka);
         ToTest.__set__("CacheFactory", CacheFactory);
@@ -591,7 +617,7 @@ describe(fileToTest, function() {
             return Promise.resolve (true);
         };
 
-        var getSpBDidAndDataType = function(){
+        var getSpBDidAndDataType = async function(){
             var didAndDataType = {
                 dataType: "String",
                 on: 1,
@@ -1079,6 +1105,38 @@ describe(fileToTest, function() {
         };
         let processDataIngestReturn = spbdataIngestion.processDataIngestion("spBv1.0/accountId/DDATA/eonID/deviceId", message);
         assert.deepEqual(processDataIngestReturn, undefined, "Unable to validate SParkplugB schema");
+        done();
+    });
+    
+    it('Process data Ingestion with INVALID seq of SparkplugB Metric', function (done) {
+        ToTest.__set__("Kafka", Kafka);
+        ToTest.__set__("CacheFactory", CacheFactory);
+        ToTest.__set__("config", config);
+        ToTest.__set__("KafkaAggregator", KafkaAggregator);
+        var spbdataIngestion = new ToTest(logger);
+        // var validateSpbDevSeq = function(){
+        //     return Promise.resolve(true);
+        // };
+        var createKafakaPubData = function(){
+            return true;
+        };
+        //spbdataIngestion.validateSpbDevSeq =validateSpbDevSeq;
+        spbdataIngestion.createKafakaPubData=createKafakaPubData;
+
+        var message = {
+            timestamp: 12345,
+            metrics: [
+                {
+                    name : "temp",
+                    alias : cid,
+                    timestamp : 12345,
+                    dataType : "Uint64",
+                    value: "value"
+                }],
+            seq: 290
+        };
+        let processDataIngestReturn = spbdataIngestion.processDataIngestion("spBv1.0/accountId/DDATA/eonID/deviceId", message);
+        assert.deepEqual(processDataIngestReturn, true, "Unable to validate SParkplugB schema");
         done();
     });
 

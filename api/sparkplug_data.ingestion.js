@@ -451,13 +451,17 @@ module.exports = function(logger) {
             */
             me.validateSpbDevSeq(topic,message).then(values =>{
                     if(values){
-                        me.createKafakaPubData(topic,message);
-                        return;
+            //          me.createKafakaPubData(topic,message);
+                        me.logger.info("Valid SpB Seq Number, creating Kafka pub data ");
+            //            return;
                     }
                 }).catch(function(err){
-                    me.logger.warn("Could not send data to Kafka due to SpB Validity failure " + err);
-                    return null;
+            //      me.logger.warn("Could not send data to Kafka due to SpB Validity failure " + err);
+                    me.logger.warn("Invalid SpB Sequance number, still moving forward to create Kafka pub data " + err);
+            //        return null;
                 });  
+            me.createKafakaPubData(topic,message);
+            return true;
             }
        } else {
           me.logger.warn("Invalid SparkplugB topic");
