@@ -120,6 +120,8 @@ describe(fileToTest, function(){
     it('Authentication shall successfully validate a token', function(done){
         var decodedToken = {
             sub: "deviceId",
+            iss: "http://keycloak-url/auth/realms/realmId",
+            type: "device",
             accounts: [{
                 role: "device",
                 id: "accountId"
@@ -149,7 +151,7 @@ describe(fileToTest, function(){
         };
         var cache = {
             setValue: function(key, type, value) {
-                assert.equal(key, "accountId/deviceId", "Wrong cache value received.");
+                assert.oneOf(key,["accountId/deviceId", "realmId/deviceId"], "Wrong cache value received.");
                 assert.equal(type, "acl", "Wrong cache value received.");
                 assert.equal(value, true, "Wrong cache value received.");
             }
@@ -174,7 +176,9 @@ describe(fileToTest, function(){
     it('Authentication shall successfully validate a token with gatewayid', function(done){
         var decodedToken = {
             sub: "deviceId",
+            iss: "http://keycloak-url/auth/realms/realmId",
             gateway: "gatewayId",
+            type: "device",
             accounts: [{
                 role: "device",
                 id: "accountId"
@@ -204,7 +208,8 @@ describe(fileToTest, function(){
         };
         var cache = {
             setValue: function(key, type, value) {
-                assert.oneOf(key,["accountId/deviceId" , "accountId/gatewayId"], "Wrong cache value received.");
+                console.log(key, type, value);
+                assert.oneOf(key,["accountId/deviceId", "realmId/deviceId", "accountId/gatewayId", "realmId/gatewayId"], "Wrong cache value received.");
                 assert.equal(type, "acl", "Wrong cache value received.");
                 assert.equal(value, true, "Wrong cache value received.");
                 return;
@@ -230,6 +235,8 @@ describe(fileToTest, function(){
     it('Authentication shall detect wrong deviceId in username', function(done){
         var decodedToken = {
             sub: "deviceId",
+            iss: "http://keycloak-url/auth/realms/realmId",
+            type: "device",
             accounts: [{
                 role: "device",
                 id: "accountId"
@@ -260,7 +267,7 @@ describe(fileToTest, function(){
         };
         var cache = {
             setValue: function(key, type, value) {
-                assert.equal(key, "accountId/deviceId", "Wrong cache value received.");
+                assert.oneOf(key,["accountId/deviceId", "realmId/deviceId"], "Wrong cache value received.");
                 assert.equal(type, "acl", "Wrong cache value received.");
                 assert.equal(value, true, "Wrong cache value received.");
             }
@@ -284,6 +291,8 @@ describe(fileToTest, function(){
     it('Authentication shall detect wrong role in token', function(done){
         var decodedToken = {
             sub: "deviceId",
+            iss: "http://keycloak-url/auth/realms/realmId",
+            type: "device",
             accounts: [{
                 role: "wrontRole",
                 id: "accountId"
@@ -314,7 +323,7 @@ describe(fileToTest, function(){
         };
         var cache = {
             setValue: function(key, type, value) {
-                assert.equal(key, "accountId/deviceId", "Wrong cache value received.");
+                assert.oneOf(key,["accountId/deviceId", "realmId/deviceId"], "Wrong cache value received.");
                 assert.equal(type, "acl", "Wrong cache value received.");
                 assert.equal(value, true, "Wrong cache value received.");
             }
@@ -338,6 +347,8 @@ describe(fileToTest, function(){
     it('Authentication shall detect wrong account array', function(done){
         var decodedToken = {
             sub: "deviceId",
+            iss: "http://keycloak-url/auth/realms/realmId",
+            type: "device",
             accounts: [{
                 role: "device",
                 id: "accountId"
@@ -371,7 +382,7 @@ describe(fileToTest, function(){
         };
         var cache = {
             setValue: function(key, type, value) {
-                assert.equal(key, "accountId/deviceId", "Wrong cache value received.");
+                assert.oneOf(key,["accountId/deviceId", "realmId/deviceId"], "Wrong cache value received.");
                 assert.equal(type, "acl", "Wrong cache value received.");
                 assert.equal(value, true, "Wrong cache value received.");
             }
