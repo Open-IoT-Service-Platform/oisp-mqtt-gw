@@ -246,21 +246,6 @@ describe(fileToTest, function() {
                     assert.equal(type, "seq", "Wrong key value");
                     return 0;
                 },
-                getValues(key) {
-                    assert.deepEqual(key, cid, "Wrong CID cache value received.");
-                    var didAndDataType = {
-                        dataType: "String",
-                        on: 1,
-                        dataElement:
-                            {
-                                "componentId": cid,
-                                "on": 12345,
-                                "value": "value",
-                                "systemOn": 2
-                            }
-                    };
-                    return didAndDataType;
-                },
                 setValue(key, type) {
                     assert.oneOf(key, ["accountId/eonID",cid], "Wrong key on cache value received.");
                     assert.oneOf(type, [ "seq", "id", "dataType" ], "Wrong type to se value received.");
@@ -317,7 +302,6 @@ describe(fileToTest, function() {
             timestamp: 12345,
             metrics: [{
                 name : "bdseq",
-                alias : cid,
                 timestamp : 12345,
                 dataType : "Uint64",
                 value: 123
@@ -341,7 +325,6 @@ describe(fileToTest, function() {
             timestamp: 12345,
             metrics: [{
                 name : "temp",
-                alias : cid,
                 timestamp : 12345,
                 dataType : "Uint64",
                 value: 123
@@ -457,78 +440,6 @@ describe(fileToTest, function() {
         .catch((e) => done(e));
     });
 
-    it('Verify SparkplugB metric existence and get its DeviceId and dataType from cache using alias Id', function (done) {
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("config", config);
-        ToTest.__set__("KafkaAggregator", KafkaAggregator);
-        var spbdataIngestion = new ToTest(logger);
-        var DataMessage = {
-            timestamp: 12345,
-            metrics: [{
-                name : "temp",
-                alias : cid,
-                timestamp : 12345,
-                dataType : "Uint64",
-                value: "value"
-            }],
-            seq: 2
-         };
-         var didAndDataType = {
-            dataType: "String",
-            on: 1,
-            dataElement:
-                {
-                    name : "temp",
-                    alias : cid,
-                    timestamp : 12345,
-                    dataType : "Uint64",
-                    value: "value"
-                }
-        };
-        spbdataIngestion.getSpBDidAndDataType(DataMessage.metrics[0])
-        .then((result) => {
-            assert.deepEqual(result, didAndDataType, "Invalid alias ID specific to device, not in cache/DB ");
-            done();
-        })
-        .catch((e) => done(e));
-    });
-
-    it('KafkaProduce for SparkplugB metric fails due to Invalid CID/Alias Id', function (done) {
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("config", config);
-        ToTest.__set__("KafkaAggregator", KafkaAggregator);
-        var spbdataIngestion = new ToTest(logger);
-        var DataMessage = {
-            timestamp: 12345,
-            metrics: [{
-                name : "temp",
-                alias : "c574252-31d5-4b76-bce6-53f2c56b",
-                timestamp : 12345,
-                dataType : "Uint64",
-                value: "value"
-            }],
-            seq: 2
-         };
-         var validateSpbDevSeq = function() {
-            return Promise.resolve (true);
-        };
-        var errorMessage = "cid not UUID. Rejected!";
-        spbdataIngestion.validateSpbDevSeq =validateSpbDevSeq; 
-        spbdataIngestion.getSpBDidAndDataType(DataMessage.metrics[0])
-        .then(() => {
-            done();
-        })
-        .catch((err) => {
-            assert.deepEqual(err, errorMessage, "Valid alias ID specific to device ");
-            done();
-        }); 
-        var kafkaPubReturn= spbdataIngestion.createKafakaPubData("spBv1.0/accountId/DBIRTH/eonID/deviceId", DataMessage);
-        assert.oneOf(kafkaPubReturn, [ false, undefined ], " Possible to produce kafka message for wrong alias/CID id: " + kafkaPubReturn);
-        done();
-    });
-
     it('KafkaProduce for SparkplugB metric fails due to empty sparkplugB message', function (done) {
         config.sparkplug.spBKafkaProduce = true;
         ToTest.__set__("Kafka", Kafka);
@@ -617,22 +528,6 @@ describe(fileToTest, function() {
             return Promise.resolve (true);
         };
 
-        var getSpBDidAndDataType = async function(){
-            var didAndDataType = {
-                dataType: "String",
-                on: 1,
-                dataElement:
-                    {
-                        name : "temp",
-                        alias : cid,
-                        timestamp : 12345,
-                        dataType : "Uint64",
-                        value: "value"
-                    }
-            };
-            return didAndDataType;
-
-        };
         config.sparkplug.spBKafkaProduce = true;
         ToTest.__set__("Kafka", Kafka);
         ToTest.__set__("config", config);
@@ -641,7 +536,6 @@ describe(fileToTest, function() {
 
         var spbdataIngestion = new ToTest(logger);
         spbdataIngestion.validateSpbDevSeq =validateSpbDevSeq;
-        spbdataIngestion.getSpBDidAndDataType= getSpBDidAndDataType;
         var message = {
             timestamp: 12345,
             metrics: [{
@@ -656,127 +550,6 @@ describe(fileToTest, function() {
         spbdataIngestion.processDataIngestion("spBv1.0/accountId/NBIRTH/eonID/", message);
         spbdataIngestion.processDataIngestion("spBv1.0/accountId/DBIRTH/eonID/deviceId", message);
         spbdataIngestion.processDataIngestion("spBv1.0/accountId/DDATA/eonID/deviceId", message);       
-    });
-
-    it('Create Kafka  publish data on kafka metric topic', function (done) {
-        var Kafka = function() {
-            return {
-                producer: function(){
-                    return {
-                        connect: function() {
-                        },
-                        on: function() {
-                        },
-                        send: function(payload) {
-                            message = payload.messages[0];
-                            assert.equal(message.key, "accountId." + cid,"Received Kafka payload key not correct");
-                            var value = {
-                                dataType: "String",
-                                aid: "accountId",
-                                cid: cid,
-                                value:"value",
-                                systemOn:1,
-                                on:1,
-                                loc:null
-                            };
-                            assert.deepEqual(JSON.parse(message.value), value, "Received Kafke message not correct");
-                            spbdataIngestion.stopAggregator();
-                            done();
-                            return new Promise(() => {});
-                        },
-                        events: "event"
-                    };
-                }
-            };
-        };
-        var prepareKafkaPayload = function(){
-            return {"dataType":"String", "aid":"accountId", "cid":cid, "value":"value", "systemOn": 1, "on": 1, "loc": null};
-        };
-        var getSpBDidAndDataType = function(){
-            var didAndDataType = {
-                dataType: "String",
-                on: 1,
-                dataElement:
-                    {
-                        name : "temp",
-                        alias : cid,
-                        timestamp : 12345,
-                        dataType : "Uint64",
-                        value: "value"
-                    }
-            };
-            return didAndDataType;
-        };
-
-        config.sparkplug.spBKafkaProduce = false;
-        config.sparkplug.ngsildKafkaProduce = false;
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("config", config);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("KafkaAggregator", origKafkaAggregator);
-
-        var spbdataIngestion = new ToTest(logger);
-
-        spbdataIngestion.prepareKafkaPayload = prepareKafkaPayload;
-        
-        spbdataIngestion.getSpBDidAndDataType= getSpBDidAndDataType;
-        var message = {
-            timestamp: 12345,
-            metrics: [{
-                name : "temp",
-                alias : cid,
-                timestamp : 12345,
-                dataType : "Uint64",
-                value: "value"
-            }],
-            seq: 0
-        };    
-        spbdataIngestion.createKafakaPubData("spBv1.0/accountId/DBIRTH/eonID/deviceId", message);
-        spbdataIngestion.createKafakaPubData("spBv1.0/accountId/DDATA/eonID/deviceId", message);
-    });
-
-    it('Shall Kafka publish data on kafka metric topic return undefined due to mismatch of datatype', function (done) {
-        var getSpBDidAndDataType = function(){
-            var didAndDataType = {
-                dataType: "Boolean",
-                on: 1,
-                dataElement:
-                    {
-                        name : "temp",
-                        alias : cid,
-                        timestamp : 12345,
-                        dataType : "Boolean",
-                        value: "NoTrue"
-                    }
-            };
-            return didAndDataType;
-        };
-
-        config.sparkplug.spBKafkaProduce = false;
-        config.sparkplug.ngsildKafkaProduce = false;
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("config", config);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("KafkaAggregator", KafkaAggregator);
-
-        var spbdataIngestion = new ToTest(logger);
-        spbdataIngestion.getSpBDidAndDataType= getSpBDidAndDataType;
-        var message = {
-            timestamp: 12345,
-            metrics: [{
-                name : "temp",
-                alias : cid,
-                timestamp : 12345,
-                dataType : "Boolean",
-                value: "NoTrue"
-            }],
-            seq: 0
-        };
-        var KafkaPubDataReturnNbirth = spbdataIngestion.createKafakaPubData("spBv1.0/accountId/NBIRTH/eonID", message);
-        assert.deepEqual(KafkaPubDataReturnNbirth, true, "Unable to send NBIRTH Message");
-        var KafkaPubDataReturnDdata = spbdataIngestion.createKafakaPubData("spBv1.0/accountId/DDATA/eonID/deviceId", message);
-        assert.deepEqual(KafkaPubDataReturnDdata, undefined, "Unable to validate createkafkaPubData with wrong datatype");
-        done();
     });
 
     it('Create Kafka  publish Relationship data on NGSI-LD Spb topic', function (done) {
@@ -816,22 +589,6 @@ describe(fileToTest, function() {
             return Promise.resolve (true);
         };
 
-        var getSpBDidAndDataType = function(){
-            var didAndDataType = {
-                dataType: "String",
-                on: 1,
-                dataElement:
-                    {
-                        name : "Relationship/https://industry-fusion.com/types/v0.9/hasFilter",
-                        alias : cid,
-                        timestamp : 12345,
-                        dataType : "string",
-                        value: "value"
-                    }
-            };
-            return Promise.resolve (didAndDataType);
-
-        };
         config.sparkplug.spBKafkaProduce = false;
         config.sparkplug.ngsildKafkaProduce = true;
         ToTest.__set__("Kafka", Kafka);
@@ -841,7 +598,6 @@ describe(fileToTest, function() {
 
         var spbdataIngestion = new ToTest(logger);
         spbdataIngestion.validateSpbDevSeq =validateSpbDevSeq;
-        spbdataIngestion.getSpBDidAndDataType= getSpBDidAndDataType;
         var message = {
             timestamp: 12345,
             metrics: [{
@@ -893,22 +649,6 @@ describe(fileToTest, function() {
             return Promise.resolve (true);
         };
 
-        var getSpBDidAndDataType = function(){
-            var didAndDataType = {
-                dataType: "String",
-                on: 1,
-                dataElement:
-                    {
-                        name : "Property/https://industry-fusion.com/types/v0.9/hasFilter",
-                        alias : cid,
-                        timestamp : 12345,
-                        dataType : "string",
-                        value: "value"
-                    }
-            };
-            return Promise.resolve (didAndDataType);
-
-        };
         config.sparkplug.spBKafkaProduce = true;
         config.sparkplug.ngsildKafkaProduce = true;
         ToTest.__set__("Kafka", Kafka);
@@ -918,7 +658,6 @@ describe(fileToTest, function() {
 
         var spbdataIngestion = new ToTest(logger);
         spbdataIngestion.validateSpbDevSeq =validateSpbDevSeq;
-        spbdataIngestion.getSpBDidAndDataType= getSpBDidAndDataType;
         var message = {
             timestamp: 12345,
             metrics: [{
@@ -1139,33 +878,6 @@ describe(fileToTest, function() {
         assert.deepEqual(processDataIngestReturn, true, "Unable to validate SParkplugB schema");
         done();
     });
-
-    it('Validate data types', function (done) {
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("config", config);
-
-        var validate = ToTest.__get__("validate");
-        assert.isTrue(validate("string", "String"), "Error in Validation");
-        assert.isTrue(validate("1.23", "Number"), "Error in Validation");
-        assert.isTrue(validate("1", "Boolean"), "Error in Validation");
-        done();
-    });
-    it('Normalize Boolean', function (done) {
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("config", config);
-
-        var normalizeBoolean = ToTest.__get__("normalizeBoolean");
-        assert.equal(normalizeBoolean("true", "Boolean"), 1, "Error in Validation");
-        assert.equal(normalizeBoolean("0", "Boolean"), 0, "Error in Validation");
-        assert.equal(normalizeBoolean("fAlse", "Boolean"), 0, "Error in Validation");
-        assert.equal(normalizeBoolean(true, "Boolean"), 1, "Error in Validation");
-        assert.equal(normalizeBoolean(1, "Boolean"), 1, "Error in Validation");
-        assert.equal(normalizeBoolean("falsetrue", "Boolean"), "NaB", "Error in Validation");
-        assert.equal(normalizeBoolean(2, "Boolean"), "NaB", "Error in Validation");
-        done();
-    });
     
     it('Shall check mqtt bind to topic', function (done) {
         ToTest.__set__("Kafka", Kafka);
@@ -1179,79 +891,4 @@ describe(fileToTest, function() {
         done();
     });
 
-    it('Shall prepare Kafka payload for kafka topic', function (done) {
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("config", config);
-        ToTest.__set__("KafkaAggregator", KafkaAggregator);
-        var spbdataIngestion = new ToTest(logger);
-        var didAndDataType = {
-            dataType: "String",
-            on: 1,
-            dataElement:
-                {
-                    "alias": cid,
-                    "on": 1,
-                    "value": "value",
-                    "timestamp": 1
-                }
-        };
-    
-        var msg = spbdataIngestion.prepareKafkaPayload(didAndDataType, "accountId");
-        var expectedMsg = {
-            dataType: "String",
-            aid: "accountId",
-            value: "value",
-            cid: cid,
-            on: 1,
-            systemOn: 1
-        };
-        assert.deepEqual(msg, expectedMsg, "Wrong kafka payload");
-        done();
-    });
-
-    it('Shall prepare Kafka payload for kafka topic with loc and attributes', function (done) {
-        ToTest.__set__("Kafka", Kafka);
-        ToTest.__set__("CacheFactory", CacheFactory);
-        ToTest.__set__("config", config);
-        ToTest.__set__("KafkaAggregator", KafkaAggregator);
-        var spbdataIngestion = new ToTest(logger);
-        var didAndDataType = {
-            dataType: "String",
-            on: 1,
-            dataElement:
-                {
-                    "alias": cid,
-                    "on": 1,
-                    "value": "value",
-                    "timestamp": 1,
-                    "attributes": {
-                        hardware_model : "linux" 
-                    },
-                    loc : {
-                        lat : 88,
-                        long : 64
-                    }
-                }
-        };
-    
-        var msg = spbdataIngestion.prepareKafkaPayload(didAndDataType, "accountId");
-        var expectedMsg = {
-            dataType: "String",
-            aid: "accountId",
-            value: "value",
-            cid: cid,
-            on: 1,
-            systemOn: 1,
-            attributes: {
-                hardware_model : "linux" 
-            },
-            loc : {
-                lat : 88,
-                long : 64
-            }   
-        };
-        assert.deepEqual(msg, expectedMsg, "Wrong kafka payload");
-        done();
-    });
 });

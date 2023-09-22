@@ -17,7 +17,6 @@
 
 "use strict";
 var Broker = require("./lib/mqtt/connector"),
-    ApiData = require('./api/data.ingestion'),
     SparkplugApiData = require('./api/sparkplug_data.ingestion'),
     ApiActuation = require('./api/actuation'),
     config = require("./config"),
@@ -30,10 +29,7 @@ var brokerConnector = Broker.singleton(config.broker, logger);
 
 function brokerCb(err) {
     if (!err) {
-        // Manage Connections to API Server
-        var apiDataConnector = new ApiData(logger);
-        apiDataConnector.bind(brokerConnector);
-        //SparkplugB connector if enabled
+        //SparkplugB connector
         var sparkplugapiDataConnector = new SparkplugApiData(logger);
         sparkplugapiDataConnector.bind(brokerConnector);
         var apiActuationConnector = new ApiActuation(logger, brokerConnector);

@@ -38,15 +38,14 @@ The Bridge also handles the auth, acl and load-balancing for MQTT and MQTT with 
 ```
   
   2. SpB-mqttgw uses different name of kafka client to get distinguished (ClientId: spBFrontend-metrics) 
-  3. CID is used as alias, as sparkplugB standard suggest unique id as alias in data metric element.
+  3. SparkplugB standard message with data metric element.
    Data message looks like below:
 ``` bash
-    var cid = "0c574252-31d5-4b76-bce6-53f2c56b544d";
+    
     var DataMessage = {
             timestamp: 12345,
             metrics: [{
                 name : "temp",
-                alias : cid,
                 timestamp : 12345,
                 dataType : "float",
                 value: 123
@@ -102,7 +101,6 @@ Eg. of SpB message payload containing NGSI-LD format Relationship Data:
     "metrics":
 	    [{
 	    "name":"Relationship/https://industry-fusion.com/types/v0.9/hasFilter",
-	    "alias":"fbb3b7cd-a5ff-491b-ad61-d43edf513b7a",
 	    "timestamp":1655974018777,
 	    "dataType":"string",
 	    "value":"urn:filter:1"}],
@@ -132,7 +130,6 @@ Eg. of SpB Converted into NGSI-LD Relationship data format:
     "metrics":
 	    [{
 	    "name":"Property/https://industry-fusion.com/types/v0.9/state",
-	    "alias":"fbb3b7cd-a5ff-491b-ad61-d43edf513b7a",
 	    "timestamp":1655974018777,
 	    "dataType":"string",
 	    "value":"https://industry-fusion.com/types/v0.9/state_OFF"}],

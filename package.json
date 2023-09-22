@@ -2,7 +2,7 @@
   "name": "iotkit-gateway",
   "version": "0.12.1",
   "date": "2015-01-26T13:46:41.332Z",
-  "description": "Authotization gateway and kafka bridge for OISP",
+  "description": "Authotization gateway and kafka bridge for MQTTGW",
   "main": "app.js",
   "dependencies": {
     "async": "^0.9.0",

@@ -96,10 +96,6 @@ var config = {
     },
     "topics": {
         "prefix": parsedConfig.topicsPrefix || "server",
-        "subscribe": {
-            "data_ingestion": "$share/bridge/server/metric/+/+",
-            "health": "server/devices/+/health"
-        },
         "publish": {
             "error": "server/error/{accountId}/{deviceId}",
             "actuation": "/{accountId}/DCMD/{gatewayId}/{deviceId}"
@@ -113,7 +109,7 @@ var config = {
     * 
     */
     "sparkplug": {
-        "spBKafkaProduce": parsedConfig.spbEnable || false,
+        "spBKafkaProduce": parsedConfig.spbEnable || true,
         "spBkafKaTopic": parsedConfig.spbTopic || "sparkplugB",
         "ngsildKafkaProduce": parsedConfig.ngsildEnable || false,
         "ngsildKafkaTopic": parsedConfig.ngsildTopic || "ngsildSpB",
