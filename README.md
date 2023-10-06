@@ -64,7 +64,7 @@ The Bridge also handles the auth, acl and load-balancing for MQTT and MQTT with 
 
 ``` bash
      "sparkplug": {
-        "spBKafkaProduce": true, 
+        "spBKafkaProduce": false, 
         "spBkafkaTopic": "sparkplugB",
         "ngsildKafkaProduce": true, 
         "ngsildKafkaTopic": "ngsildSpB"
@@ -86,7 +86,6 @@ The Bridge also handles the auth, acl and load-balancing for MQTT and MQTT with 
 | true          | true        | SpB NGSI-LD format metric on "ngsildSpB" topic; Rest on "sparkplugB"  |
 | true          | false        | All message on "sparkplugB"  |
 | false          | true        | SpB NGSI-LD format metric on "ngsildSpB" topic; Rest ignored  |
-| false         | false        | All message on "metric"  |
 
 
 2. NGSI-LD message format converted from received SpB message format

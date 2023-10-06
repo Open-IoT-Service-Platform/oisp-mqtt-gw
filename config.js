@@ -87,13 +87,6 @@ var config = {
       "linger": parsedConfig.kafkaConfig.linger,
       "partitioner": parsedConfig.kafkaConfig.partitioner
     },
-    "postgres": {
-      "host": parsedConfig.postgresConfig.hostname,
-      "dbname": parsedConfig.postgresConfig.dbname,
-      "port": parsedConfig.postgresConfig.port,
-      "username": parsedConfig.postgresConfig.username,
-      "password": parsedConfig.postgresConfig.password
-    },
     "topics": {
         "prefix": parsedConfig.topicsPrefix || "server",
         "publish": {
@@ -118,7 +111,8 @@ var config = {
                 "sparkplugb_data_ingestion": "spBv1.0/+/+/+/+"
             },
             "publish": {
-            "error": "server/error/{accountId}/{deviceId}"
+            "error": "server/error/{accountId}/{deviceId}",
+            "actuation": "/{realmId}/DCMD/{gatewayId}/{deviceId}"
              }
         }
     },
