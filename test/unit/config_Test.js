@@ -47,7 +47,6 @@ describe(fileToTest, function() {
         "authServicePort": "2345", \
         "redisConf": "@@OISP_REDIS_CONFIG", \
         "kafkaConfig": "@@OISP_KAFKA_CONFIG", \
-        "postgresConfig": "@@OISP_POSTGRES_CONFIG", \
         "keycloakConfig": "@@OISP_KEYCLOAK_CONFIG", \
         "aesKey": "/app/keys/mqtt/mqtt_gw_secret.key" \
     }';
@@ -56,17 +55,6 @@ describe(fileToTest, function() {
         "hostname": "redis",\
         "port": "6379",\
         "password": "password" \
-    }';
-
-    process.env.OISP_POSTGRES_CONFIG = '{\
-        "dbname": "oisp",\
-        "hostname": "postgres-ro",\
-        "writeHostname": "postgres",\
-        "port": "5432",\
-        "su_username": "su_username",\
-        "su_password": "su_password",\
-        "username": "username",\
-        "password": "password"\
     }';
 
     var parseResult = {
@@ -94,16 +82,6 @@ describe(fileToTest, function() {
             "retries": 10,
             "requestTimeout": 4,
             "maxRetryTime": 10
-        },
-        "postgresConfig": {
-            "dbname": "oisp",
-            "hostname": "postgres-ro",
-            "writeHostname": "postgres",
-            "port": "5432",
-            "su_username": "su_username",
-            "su_password": "su_password",
-            "username": "username",
-            "password": "password"
         },
         "keycloakConfig": {
             "auth-server-url": "keycloak",

@@ -1,7 +1,7 @@
 {
   "name": "iotkit-gateway",
   "version": "0.12.1",
-  "date": "2015-01-26T13:46:41.332Z",
+  "date": "2023-10-09T13:46:41.332Z",
   "description": "Authotization gateway and kafka bridge for MQTTGW",
   "main": "app.js",
   "dependencies": {
@@ -24,10 +24,6 @@
     "test": "node gateway-agent",
     "start": "node gateway-agent"
   },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/enableiot/iotkit-analytics.git"
-  },
   "keywords": [
     "iotkit",
     "authorization"
@@ -40,7 +36,7 @@
   "homepage": "https://github.com/enableiot/iotkit-analytics",
   "devDependencies": {
     "asserts": "^4.0.0",
-    "chai": "^4.2.0",
+    "chai": "^4.3.6",
     "grunt": "^1.3.0",
     "grunt-cli": "^1.3.2",
     "grunt-contrib-jshint": "^3.0.0",
