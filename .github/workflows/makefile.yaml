@@ -44,8 +44,6 @@ jobs:
         if [ -z "${SELF_HOSTED_RUNNER}" ]; then
           cd util && \
           bash setup-ubuntu20.04.sh
-        else
-          make restart-cluster
         fi
     - name: Prepare Digital Twin
       working-directory: DigitalTwin
@@ -73,7 +71,20 @@ jobs:
       working-directory: DigitalTwin
       shell: bash
       run: |
-        cd ./test && bash install-local-platform.sh
+        cd ./test
+        retval=2
+        loops=0
+        until bash install-local-platform.sh || [ ${loops} -gt 3 ]; do
+          loops=$((loops+1))
+          echo loop: ${loops}
+          k3d cluster delete iff-cluster
+          if [ -z "${SELF_HOSTED_RUNNER}" ]; then
+            bash ./prepare-platform.sh
+          else
+            bash ./prepare-platform-for-self-hosted-runner.sh
+          fi
+        done
+        if [ ${loops} -gt 3 ]; then exit 1; fi
     - name: Build platform
       working-directory: platform-launcher
       shell: bash
@@ -81,6 +92,14 @@ jobs:
         set +o pipefail
         export TERM=vt100
         yes | DOCKER_TAG=test NODOCKERLOGIN=true DEBUG=true make build
+    - name: Prepare OISP Bats Framework
+      working-directory: platform-launcher
+      shell: bash
+      run: |
+        cd ./tests/bats
+        bash ./prepare-bats.sh
+        bats linting.bats
+        shellcheck *.sh *.bats test-*/*.bats
     - name: E2E Test
       id: e2etest
       working-directory: platform-launcher
@@ -95,15 +114,10 @@ jobs:
         npm install nodemailer
         export NODOCKERLOGIN=true
         retval=2
-        loops=0
         export DOCKER_TAG=test
         export USE_LOCAL_REGISTRY=true
-        until [ ${retval} -eq 0 ] || [ ${loops} -gt 3 ]; do
-          make undeploy-oisp
-          (for i in {1..20}; do sleep 60; echo .; done&) &&  make deploy-oisp-test
-          make test
-          retval=$?
-          loops=$((loops+1))
-        done
+        make deploy-oisp-test
+        make test
+        retval=$?
         echo Test return value: ${retval}
         exit ${retval}
