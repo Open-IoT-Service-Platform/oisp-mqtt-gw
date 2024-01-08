@@ -1,6 +1,7 @@
 # iotkit-gateway
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FOpen-IoT-Service-Platform%2Foisp-mqtt-gw.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FOpen-IoT-Service-Platform%2Foisp-mqtt-gw?ref=badge_shield)
 
+**NOTE: This project reached end of support and is no longer maintained. Parts of the project are continued in** https://github.com/IndustryFusion/DigitalTwin.
 ==============
 
 This repository contains a Bridge between MQTT and Kafka for OISP.
